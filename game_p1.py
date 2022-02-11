@@ -1,3 +1,4 @@
+from ast import unparse
 import pygame
 from pygame.locals import (
     K_ESCAPE,
@@ -5,6 +6,7 @@ from pygame.locals import (
     QUIT,
 )
 import const
+from utils import parse_coords
 
 def main():
     pygame.init()
@@ -38,7 +40,8 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.MOUSEBUTTONUP:
                 pos = pygame.mouse.get_pos()
-                print(pos)
+                if not (pos[0] < 25 or pos[1] < 25 or pos[0] > const.HEIGHT - 25 or pos[1] > const.WIDTH - 25):
+                    print(parse_coords(pos))
             elif event.type == KEYDOWN and event.key == K_ESCAPE:
                 running = False
             elif event.type == QUIT:
