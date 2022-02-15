@@ -27,8 +27,8 @@ def main():
     bg_img = pygame.transform.scale(bg_img,(const.WIDTH, const.HEIGHT))
 
     map_tiles = []
-    j1_tiles = []
-    j2_tiles = []
+    p1_tiles = []
+    p2_tiles = []
     turn = 1
     state_num = 0
     last_state = None
@@ -47,8 +47,8 @@ def main():
             pygame.draw.line(window, (255, 0, 0), (25 + const.BLOCKSIZE*i, 0), (const.BLOCKSIZE*i+25, const.HEIGHT))
             pygame.draw.line(window, (255, 0, 0), (0, 25 + const.BLOCKSIZE*i), (const.HEIGHT, const.BLOCKSIZE*i+25))
 
-        molino_j1_img = scale_img("assets/image/molino_j1.png", (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
-        molino_j2_img = scale_img("assets/image/molino_j2.png", (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
+        mill_p1_img = scale_img("assets/image/molino_j1.png", (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
+        mill_p2_img = scale_img("assets/image/molino_j2.png", (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
 
         for event in pygame.event.get():
             if event.type == pygame.MOUSEBUTTONUP:
@@ -57,37 +57,37 @@ def main():
                     pcords = parse_coords(pos)
                     print(pcords)
                     if turn == 1:
-                        j1_tiles.append(pcords)
+                        p1_tiles.append(pcords)
                     if turn == -1:
-                        j2_tiles.append(pcords)
+                        p2_tiles.append(pcords)
                     turn *= -1
             elif event.type == KEYDOWN:
                 if event.key == K_ESCAPE:
                     running = False
                 elif event.key == K_s:
-                    last_state = save_state(j1_tiles, j2_tiles, state_num)
+                    last_state = save_state(p1_tiles, p2_tiles, state_num)
                     state_num += 1
                 elif event.key == K_r:
                     bg_img = pygame.image.load(const.BOARD)
                     bg_img = pygame.transform.scale(bg_img,(const.WIDTH, const.HEIGHT))
-                    j1_tiles, j2_tiles = load_state(state_num)
+                    p1_tiles, p2_tiles = load_state(state_num)
             elif event.type == QUIT:
                 running = False
 
-        for j1_tile in j1_tiles:
-            rect = molino_j1_img.get_rect(center = unparse_coords(j1_tile))
-            map_tiles.append((molino_j1_img, rect))
+        for p1_tile in p1_tiles:
+            rect = mill_p1_img.get_rect(center = unparse_coords(p1_tile))
+            map_tiles.append((mill_p1_img, rect))
         
-        for j2_tile in j2_tiles:
-            rect = molino_j2_img.get_rect(center = unparse_coords(j2_tile))
-            map_tiles.append((molino_j2_img, rect))
+        for p2_tile in p2_tiles:
+            rect = mill_p2_img.get_rect(center = unparse_coords(p2_tile))
+            map_tiles.append((mill_p2_img, rect))
 
         window.blits()
         pygame.display.update()
     pygame.quit()
 
-def save_state(j1_tiles, j2_tiles, state_num):
-    state_data = {"state": state_num, "j1": j1_tiles, "j2": j2_tiles}
+def save_state(p1_tiles, p2_tiles, state_num):
+    state_data = {"state": state_num, "j1": p1_tiles, "j2": p2_tiles}
     with open("states.json", "w") as states:
         json.dump(state_data, states)
     return state_data

@@ -1,6 +1,10 @@
 WIDTH = 575
 HEIGHT = 575
-BOARD = 'assets/image/tablero.png'
+BOARD = 'assets/image/board.png'
 MUSIC = 'assets/audio/bg_music.mp3'
+P1_TILE_IMG = 'assets/image/mill_p1.png'
+P2_TILE_IMG = 'assets/image/mill_p2.png'
+STATES_JSON = 'persistence/states.json'
+LOGS_PATH = 'logs/'
 LOGO = BOARD
 BLOCKSIZE = 75
