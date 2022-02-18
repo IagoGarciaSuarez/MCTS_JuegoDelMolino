@@ -9,6 +9,7 @@ from pygame.locals import (
 import const
 import json
 from utils import parse_coords, scale_img, unparse_coords
+from state import State
 
 def main():
     pygame.init()
@@ -30,6 +31,7 @@ def main():
     p1_tiles = []
     p2_tiles = []
     turn = 1
+    nTurn = 1
     state_num = 0
     last_state = None
 
@@ -67,7 +69,7 @@ def main():
             #COLUMNS
             pygame.draw.line(window, (255, 0, 0), (25 + const.BLOCKSIZE*i, 25), (const.BLOCKSIZE*i+25, const.HEIGHT-142))
             #ROWS
-            pygame.draw.line(window, (255, 0, 0), (25, 25 + const.BLOCKSIZE*i), (const.HEIGHT, const.BLOCKSIZE*i+25))
+            pygame.draw.line(window, (255, 0, 0), (25, 25 + const.BLOCKSIZE*i), (const.HEIGHT-125, const.BLOCKSIZE*i+25))
 
         mill_p1_img = scale_img("assets/image/mill_p1.png", (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
         mill_p2_img = scale_img("assets/image/mill_p2.png", (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
@@ -75,7 +77,7 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.MOUSEBUTTONUP:
                 pos = pygame.mouse.get_pos()
-                if not (pos[0] < 25 or pos[1] < 25 or pos[0] > const.HEIGHT - 25 or pos[1] > const.WIDTH - 25):
+                if not (pos[0] < 25 or pos[1] < 25 or pos[0] > const.HEIGHT - 125 or pos[1] > const.WIDTH - 25):
                     pcords = parse_coords(pos)
                     print(pcords)
                     if turn == 1:
@@ -84,8 +86,10 @@ def main():
                         p2_tiles.append(pcords)
                     turn *= -1
                 if (pos[0] > 25 and pos[0] < 195 and pos[1] > 562 and pos[1] < const.HEIGHT-5):
+                    savedState = State(state_num, p1_tiles, p2_tiles, 0, 0, nTurn)
+                    savedState.save_state()
                     state_num += 1
-                    last_state = save_state(p1_tiles, p2_tiles, state_num)
+                    nTurn += 1
                     print("State saved")
                 if (pos[0] > 195 and pos[0] < 380 and pos[1] > 562 and pos[1] < const.HEIGHT-5):
                     bg_img = pygame.image.load(const.BOARD)
@@ -93,17 +97,20 @@ def main():
                     map_tiles.clear()
                     p1_tiles.clear()
                     p2_tiles.clear()
-                    p1_tiles, p2_tiles = load_state(state_num)
+                    p1_tiles, p2_tiles, turn = savedState.load_state()
                     print("State loaded")
                 if (pos[0] > 380 and pos[0] < const.WIDTH - 25 and pos[1] > 562 and pos[1] < const.HEIGHT-5):
-                    print("Bye!")
-                    running = False
+                    map_tiles.clear()
+                    p1_tiles.clear()
+                    p2_tiles.clear()
+                    print("Emptied board")
             elif event.type == KEYDOWN:
                 if event.key == K_ESCAPE:
                     running = False
                 elif event.key == K_s:
+                    savedState = State(state_num, p1_tiles, p2_tiles, 0, 0, turn)
+                    savedState.save_state()
                     state_num += 1
-                    last_state = save_state(p1_tiles, p2_tiles, state_num)                    
                     print("State saved")
                 elif event.key == K_r:
                     bg_img = pygame.image.load(const.BOARD)
@@ -111,10 +118,11 @@ def main():
                     map_tiles.clear()
                     p1_tiles.clear()
                     p2_tiles.clear()
-                    p1_tiles, p2_tiles = load_state(state_num)
+                    p1_tiles, p2_tiles, turn = savedState.load_state()
                     print("State loaded")
             elif event.type == QUIT:
                 running = False
+                print("Bye!")
 
         for p1_tile in p1_tiles:
             rect = mill_p1_img.get_rect(center = unparse_coords(p1_tile))
@@ -127,18 +135,6 @@ def main():
         #window.blits()
         pygame.display.update()
     pygame.quit()
-
-def save_state(p1_tiles, p2_tiles, state_num):
-    state_data = {"state": state_num, "j1": p1_tiles, "j2": p2_tiles}
-    with open("persistence/SaveState.json", "w") as states:
-        json.dump(state_data, states)
-    return state_data
-
-def load_state(state_num):
-    with open("persistence/SaveState.json", "r") as states:
-        state_info = json.load(states)
-    return (state_info["j1"], state_info["j2"])
-
 
 if __name__ == '__main__':
     main()
