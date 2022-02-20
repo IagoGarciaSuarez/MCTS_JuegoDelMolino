@@ -31,7 +31,6 @@ def main():
     p1_tiles = []
     p2_tiles = []
     turn = 1
-    nTurn = 1
     state_num = 0
     last_state = None
 
@@ -74,6 +73,8 @@ def main():
         mill_p1_img = scale_img("assets/image/mill_p1.png", (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
         mill_p2_img = scale_img("assets/image/mill_p2.png", (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
 
+        saved_state = State(state_num, p1_tiles, p2_tiles, 0, 0, turn)
+
         for event in pygame.event.get():
             if event.type == pygame.MOUSEBUTTONUP:
                 pos = pygame.mouse.get_pos()
@@ -85,11 +86,10 @@ def main():
                     if turn == -1:
                         p2_tiles.append(pcords)
                     turn *= -1
+                    saved_state = State(state_num, p1_tiles, p2_tiles, 0, 0, turn)
                 if (pos[0] > 25 and pos[0] < 195 and pos[1] > 562 and pos[1] < const.HEIGHT-5):
-                    savedState = State(state_num, p1_tiles, p2_tiles, 0, 0, nTurn)
-                    savedState.save_state()
+                    saved_state.save_state()
                     state_num += 1
-                    nTurn += 1
                     print("State saved")
                 if (pos[0] > 195 and pos[0] < 380 and pos[1] > 562 and pos[1] < const.HEIGHT-5):
                     bg_img = pygame.image.load(const.BOARD)
@@ -97,7 +97,7 @@ def main():
                     map_tiles.clear()
                     p1_tiles.clear()
                     p2_tiles.clear()
-                    p1_tiles, p2_tiles, turn = savedState.load_state()
+                    p1_tiles, p2_tiles, turn = saved_state.load_state()
                     print("State loaded")
                 if (pos[0] > 380 and pos[0] < const.WIDTH - 25 and pos[1] > 562 and pos[1] < const.HEIGHT-5):
                     map_tiles.clear()
@@ -108,8 +108,7 @@ def main():
                 if event.key == K_ESCAPE:
                     running = False
                 elif event.key == K_s:
-                    savedState = State(state_num, p1_tiles, p2_tiles, 0, 0, turn)
-                    savedState.save_state()
+                    saved_state.save_state()
                     state_num += 1
                     print("State saved")
                 elif event.key == K_r:
@@ -118,7 +117,7 @@ def main():
                     map_tiles.clear()
                     p1_tiles.clear()
                     p2_tiles.clear()
-                    p1_tiles, p2_tiles, turn = savedState.load_state()
+                    p1_tiles, p2_tiles, turn = saved_state.load_state()
                     print("State loaded")
             elif event.type == QUIT:
                 running = False
