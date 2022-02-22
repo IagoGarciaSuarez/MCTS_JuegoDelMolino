@@ -1,6 +1,8 @@
 import json
 import const
-import logging
+from movement import Movement
+from tile import Tile
+# import logging
 
 # logs = logging.getLogger(__name__)
 # logs.setLevel(logging.DEBUG)
@@ -18,7 +20,9 @@ import logging
 # logs.addHandler(stream)
 
 class State:
+    '''La clase estado corresponde a la clase tablero.'''
     def __init__(self, state_id, p1_positions, p2_positions, p1_n_tiles, p2_n_tiles, turn):
+        '''Inicialización de la clase estado correspondiente al tablero.'''
         self.__state_id = state_id
         self.__p1_positions = p1_positions
         self.__p2_positions = p2_positions
@@ -27,6 +31,7 @@ class State:
         self.__turn = turn
 
     def save_state(self):
+        '''Guardado del último estado en un archivo JSON.'''
         state_data = {
             "state_id": self.__state_id,
             "p1_positions": self.__p1_positions,
@@ -36,12 +41,11 @@ class State:
             "turn": self.__turn
         }
 
-        # Currently only saving one state, therefore only load the last saved state.
         with open(const.STATES_JSON, 'w') as states_file:
             json.dump(state_data, states_file)
-        #logs.info("Estado actual de la partida guardado correctamente.")
     
     def load_state(self):
+        '''Carga del último estado guardado a partir de un JSON.'''
         with open(const.STATES_JSON, 'r') as states_file:
             state_data = json.load(states_file)
         
@@ -52,8 +56,28 @@ class State:
         self.__p2_n_tiles = state_data["p2_n_tiles"]
         self.__turn = state_data["turn"]
 
-        return self.__p1_positions, self.__p2_positions, self.__turn
-
         #logs.info("Última partida guardada cargada correctamente.")
+
+    def get_tile_data(self, position):
+        '''Genera una instancia de Tile con los datos de una ficha dada una posición del tablero.'''
+        if position in const.BOARD_POSITIONS and position in self.__p1_positions:
+            return Tile(position, 0)
+        elif position in const.BOARD_POSITIONS and position in self.__p2_positions:
+            return Tile(position, 1)
+
+    def verify_movement(self, movement: Movement):
+        '''
+        Verificación del movimiento con forma (pos_inicial, pos_final).
+        Comprueba si existe una ficha en la posición inicial, 
+        si está viva y si la posición objetivo existe y es alcanzable
+        desde la posición inicial.
+        '''
+        tile = self.get_tile_data(movement.initial_pos)
+        if not tile or not tile.alive:
+            return False
+        if str(movement.final_pos) not in const.BOARD_POSITIONS or \
+            movement.final_pos not in const.BOARD_POSITIONS[str(movement.initial_pos)]:
+            return False
+        
 
         
