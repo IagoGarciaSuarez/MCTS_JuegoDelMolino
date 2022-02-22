@@ -38,6 +38,7 @@ def main():
     smallfont = pygame.font.SysFont('Corbel',35)
     text = smallfont.render('Save' , True , (255,255,255))
 
+    positions = []
     running = True
     while running:
         window.blit(bg_img, (0,0))
@@ -80,7 +81,8 @@ def main():
                 pos = pygame.mouse.get_pos()
                 if not (pos[0] < 25 or pos[1] < 25 or pos[0] > const.HEIGHT - 125 or pos[1] > const.WIDTH - 25):
                     pcords = parse_coords(pos)
-                    print(pcords)
+                    positions.append(pcords)
+                    print(positions)
                     if turn == 1:
                         p1_tiles.append(pcords)
                     if turn == -1:
@@ -103,6 +105,7 @@ def main():
                     map_tiles.clear()
                     p1_tiles.clear()
                     p2_tiles.clear()
+                    positions.clear()
                     print("Emptied board")
             elif event.type == KEYDOWN:
                 if event.key == K_ESCAPE:
