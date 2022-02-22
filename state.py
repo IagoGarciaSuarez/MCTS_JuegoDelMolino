@@ -43,6 +43,9 @@ class State:
 
         with open(const.STATES_JSON, 'w') as states_file:
             json.dump(state_data, states_file)
+
+        print(state_data)
+        #logs.info("Estado actual de la partida guardado correctamente.")
     
     def load_state(self):
         '''Carga del último estado guardado a partir de un JSON.'''
@@ -65,7 +68,7 @@ class State:
         elif position in const.BOARD_POSITIONS and position in self.__p2_positions:
             return Tile(position, 1)
 
-    def verify_movement(self, movement: Movement):
+    def validate_movement(self, movement: Movement):
         '''
         Verificación del movimiento con forma (pos_inicial, pos_final).
         Comprueba si existe una ficha en la posición inicial, 
