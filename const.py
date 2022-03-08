@@ -6,6 +6,7 @@ P1_TILE_IMG = 'assets/image/mill_p1.png'
 P2_TILE_IMG = 'assets/image/mill_p2.png'
 STATES_JSON = 'persistence/saved_state.json'
 LOGS_PATH = 'logs/'
+USERS_DATABASE_DIR = 'persistence/'
 LOGO = BOARD
 BLOCKSIZE = 75
 BOARD_POSITIONS = {

@@ -1,142 +1,87 @@
-import pygame
-from pygame.locals import (
-    K_ESCAPE,
-    K_s,
-    K_r,
-    KEYDOWN,
-    QUIT,
-)
-import const
-import json
-from utils import parse_coords, scale_img, unparse_coords
-from state import State
+#!/usr/bin/python3 -u
+# -*- coding: utf-8 -*-
 
-def main():
-    pygame.init()
-    pygame.mixer.init()
-    pygame.mixer.music.load(const.MUSIC)
-    pygame.mixer.music.set_volume(0.1)
-    pygame.mixer.music.play(-1)
+import cmd
+import utils
+import uuid
+from getpass import getpass
+from db_manager import UserDB
 
-    clock = pygame.time.Clock()
+class main(cmd.Cmd):
+    prompt = '>'
+    user_uid = None
+    username = None
+    password_hash = None
+    users_db = UserDB()
 
-    window = pygame.display.set_mode((const.WIDTH, const.HEIGHT))
-    pygame.display.set_caption('Juego del Molino')
-    pygame.display.set_icon(pygame.image.load(const.LOGO))
+    def do_login(self, initial=None):
+        'login - Log into the system with an existing account.\n'
+        self.username = input('Nombre de usuario: ')
+        self.password_hash = utils.get_password_sha256(getpass('Password: '))
+        self.user_uid = self.users_db.verify_login(self.username, self.password_hash)
+        if self.user_uid:
+            print('Logged in successfully.\n')
+        else:
+            print('Wrong credentials.\n')
+            self.username = None
+            self.password_hash = None
+            self.user_uid = None
 
-    bg_img = pygame.image.load(const.BOARD)
-    bg_img = pygame.transform.scale(bg_img,(const.WIDTH, const.HEIGHT))
+    def do_logout(self, initial=None):
+        'logout - Log out of the system.\n'
+        if not self.user_uid:
+            print('No user is logged in currently.\n')
+            return
+        self.user_uid = None
+        self.username = None
+        self.password_hash = None
+        print('Logged out successfully.\n')        
 
-    map_tiles = []
-    p1_tiles = []
-    p2_tiles = []
-    turn = 1
-    state_num = 0
-    last_state = None
+    def do_createuser(self, initial=None):
+        'createuser - Create a new user given a username and a password.\n'
+        if self.user_uid:
+            print('A user is already logged in.\n')
+            return
+        self.username = input('Nombre de usuario: ')
+        self.password_hash = utils.get_password_sha256(getpass('Password: '))
+        if self.username and self.password_hash:
+            self.user_uid = str(uuid.uuid4())
+            self.users_db.new_user(self.user_uid, self.username, self.password_hash)
+            print('New user created successfully.\n')
+    
+    def do_updateuser(self, initial=None):
+        ('updateuser - Update the username or the userpassword. If no input is written '
+        'in any field, that field will not be updated.\n')
+    
+    def do_removeuser(self, initial=None):
+        'removeuser - Remove the current account and all its data.\n'
+        if not self.user_uid:
+            print('No user is logged in currently.\n')
+            return
+        self.users_db.remove_user(self.user_uid)
+        self.do_logout()
+        print('User removed successfully.\n')
 
-    #Button
-    smallfont = pygame.font.SysFont('Corbel',35)
-    text = smallfont.render('Save' , True , (255,255,255))
+    def do_creategame(self, initial=None):
+        'creategame - Ask the server to create a new game.\n'
+    
+    def do_listgames(self, initial=None):
+        'listgames - List all the available games at the moment with their uid to join.\n'
 
-    positions = []
-    running = True
-    while running:
-        window.blit(bg_img, (0,0))
-        window.blits(map_tiles)
-        clock.tick(15)
-        #TABLE LINES
-        #UP
-        pygame.draw.line(window, (255, 0, 0), (25, 25), (const.WIDTH - 25, 25))
-        #DOWN
-        pygame.draw.line(window, (255, 0, 0), (25, const.HEIGHT-142), (const.WIDTH-25, const.HEIGHT-142))
-        #LEFT
-        pygame.draw.line(window, (255, 0, 0), (25, 25), (25, const.HEIGHT-142))
-        #RIGHT
-        pygame.draw.line(window, (255, 0, 0), (const.WIDTH - 25, 25), (const.WIDTH-25, const.HEIGHT-142))
+    def do_joingame(self, arg, initial=None):
+        'joingame <game uid> - Given a uid, try to join to the respective game.\n'
 
-        #BUTTONS LINES
-        #UP
-        pygame.draw.line(window, (255, 0, 0), (25, 562), (const.WIDTH - 25, 562))
-        #DOWN
-        pygame.draw.line(window, (255, 0, 0), (25, const.HEIGHT-5), (const.WIDTH-25, const.HEIGHT-5))
-        #COLUMNS
-        pygame.draw.line(window, (255, 0, 0), (25, 562), (25, const.HEIGHT-5))
-        pygame.draw.line(window, (255, 0, 0), (195, 562), (195, const.HEIGHT-5))
-        pygame.draw.line(window, (255, 0, 0), (380, 562), (380, const.HEIGHT-5))
-        pygame.draw.line(window, (255, 0, 0), (const.WIDTH - 25, 562), (const.WIDTH-25, const.HEIGHT-5))
+    def do_exit(self, initial=None):
+        'exit - Stop and exit the application.\n'
+        return self.close()
 
-        for i in range(1, 7):
-            #COLUMNS
-            pygame.draw.line(window, (255, 0, 0), (25 + const.BLOCKSIZE*i, 25), (const.BLOCKSIZE*i+25, const.HEIGHT-142))
-            #ROWS
-            pygame.draw.line(window, (255, 0, 0), (25, 25 + const.BLOCKSIZE*i), (const.HEIGHT-125, const.BLOCKSIZE*i+25))
+    def close(self):
+        return True
 
-        mill_p1_img = scale_img("assets/image/mill_p1.png", (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
-        mill_p2_img = scale_img("assets/image/mill_p2.png", (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
 
-        saved_state = State(state_num, p1_tiles, p2_tiles, 0, 0, turn)
-
-        for event in pygame.event.get():
-            if event.type == pygame.MOUSEBUTTONUP:
-                pos = pygame.mouse.get_pos()
-                if not (pos[0] < 25 or pos[1] < 25 or pos[0] > const.HEIGHT - 125 or pos[1] > const.WIDTH - 25):
-                    pcords = parse_coords(pos)
-                    positions.append(pcords)
-                    print(positions)
-                    if turn == 1:
-                        p1_tiles.append(pcords)
-                    if turn == -1:
-                        p2_tiles.append(pcords)
-                    turn *= -1
-                    saved_state = State(state_num, p1_tiles, p2_tiles, 0, 0, turn)
-                if (pos[0] > 25 and pos[0] < 195 and pos[1] > 562 and pos[1] < const.HEIGHT-5):
-                    saved_state.save_state()
-                    state_num += 1
-                    print("State saved")
-                if (pos[0] > 195 and pos[0] < 380 and pos[1] > 562 and pos[1] < const.HEIGHT-5):
-                    bg_img = pygame.image.load(const.BOARD)
-                    bg_img = pygame.transform.scale(bg_img,(const.WIDTH, const.HEIGHT))
-                    map_tiles.clear()
-                    p1_tiles.clear()
-                    p2_tiles.clear()
-                    p1_tiles, p2_tiles, turn = saved_state.load_state()
-                    print("State loaded")
-                if (pos[0] > 380 and pos[0] < const.WIDTH - 25 and pos[1] > 562 and pos[1] < const.HEIGHT-5):
-                    map_tiles.clear()
-                    p1_tiles.clear()
-                    p2_tiles.clear()
-                    positions.clear()
-                    print("Emptied board")
-            elif event.type == KEYDOWN:
-                if event.key == K_ESCAPE:
-                    running = False
-                elif event.key == K_s:
-                    saved_state.save_state()
-                    state_num += 1
-                    print("State saved")
-                elif event.key == K_r:
-                    bg_img = pygame.image.load(const.BOARD)
-                    bg_img = pygame.transform.scale(bg_img,(const.WIDTH, const.HEIGHT))
-                    map_tiles.clear()
-                    p1_tiles.clear()
-                    p2_tiles.clear()
-                    p1_tiles, p2_tiles, turn = saved_state.load_state()
-                    print("State loaded")
-            elif event.type == QUIT:
-                running = False
-                print("Bye!")
-
-        for p1_tile in p1_tiles:
-            rect = mill_p1_img.get_rect(center = unparse_coords(p1_tile))
-            map_tiles.append((mill_p1_img, rect))
-        
-        for p2_tile in p2_tiles:
-            rect = mill_p2_img.get_rect(center = unparse_coords(p2_tile))
-            map_tiles.append((mill_p2_img, rect))
-
-        #window.blits()
-        pygame.display.update()
-    pygame.quit()
-
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    game = main()
+    try:
+        game.cmdloop()
+    except KeyboardInterrupt:
+        game.close()

@@ -1,4 +1,5 @@
 import const
+import hashlib
 import pygame
 
 def parse_coords(coords):
@@ -11,3 +12,8 @@ def scale_img(route, size):
 	img = pygame.image.load(route)
 	img = pygame.transform.scale(img, size)
 	return img
+
+
+def get_password_sha256(password):
+    '''Genera el sha256 de una password.'''
+    return hashlib.sha256(password.encode('utf-8')).hexdigest()
