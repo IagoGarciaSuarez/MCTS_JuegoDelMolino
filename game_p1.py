@@ -1,142 +1,174 @@
-import pygame
-from pygame.locals import (
-    K_ESCAPE,
-    K_s,
-    K_r,
-    KEYDOWN,
-    QUIT,
-)
-import const
-import json
-from utils import parse_coords, scale_img, unparse_coords
-from state import State
+#!/usr/bin/python3 -u
+# -*- coding: utf-8 -*-
 
-def main():
-    pygame.init()
-    pygame.mixer.init()
-    pygame.mixer.music.load(const.MUSIC)
-    pygame.mixer.music.set_volume(0.1)
-    pygame.mixer.music.play(-1)
+import cmd
+import string
+from tokenize import String
+from server import Server
+import utils
+import uuid
+from prettytable import PrettyTable
+from getpass import getpass
+from db_manager import UserDB
 
-    clock = pygame.time.Clock()
+class main(cmd.Cmd):
+    prompt = '\n>'
+    user_uid = None
+    username = None
+    password_hash = None
+    last_gamelist = None
+    users_db = UserDB()
+    server = Server()
 
-    window = pygame.display.set_mode((const.WIDTH, const.HEIGHT))
-    pygame.display.set_caption('Juego del Molino')
-    pygame.display.set_icon(pygame.image.load(const.LOGO))
+    def do_login(self, initial=None):
+        'login - Log into the system with an existing account.\n'
+        try:
+            self.username = input('Username: ')
+            self.password_hash = utils.get_password_sha256(getpass('Password: '))
+        except EOFError:
+            return
+        self.user_uid = self.users_db.verify_login(self.username, self.password_hash)
+        if self.user_uid:
+            self.prompt = f'\n[{self.username}]>'
+            print('Logged in successfully.\n')
+        else:
+            print('Wrong credentials.\n')
+            self.do_logout()
 
-    bg_img = pygame.image.load(const.BOARD)
-    bg_img = pygame.transform.scale(bg_img,(const.WIDTH, const.HEIGHT))
+    def do_logout(self, initial=None):
+        'logout - Log out of the system.\n'
+        self.user_uid = None
+        self.username = None
+        self.password_hash = None
+        self.last_gamelist = None
+        self.prompt = '\n>'
 
-    map_tiles = []
-    p1_tiles = []
-    p2_tiles = []
-    turn = 1
-    state_num = 0
-    last_state = None
+    def do_createuser(self, initial=None):
+        'createuser - Create a new user given a username and a password.\n'
+        if self.user_uid:
+            print('A user is already logged in.\n')
+            return
+        try:
+            self.username = input('Username: ')
+            if self.users_db.is_registered(self.username):
+                print(f'Username {self.username} is already taken.\n')
+                self.do_logout()
+                return
+            self.password_hash = utils.get_password_sha256(getpass('Password: '))
+        except EOFError:
+            return
+        if self.username and self.password_hash:
+            self.user_uid = str(uuid.uuid4())
+            self.users_db.new_user(self.user_uid, self.username, self.password_hash)
+            print('New user created successfully.\n')
 
-    #Button
-    smallfont = pygame.font.SysFont('Corbel',35)
-    text = smallfont.render('Save' , True , (255,255,255))
+    def do_stats(self, initial=None):
+        'stats - Check the stats for the currently logged user.\n'
+        if not self.user_uid:
+            print('No user is logged in currently.\n')
+            return
+        stats = self.users_db.get_stats(self.user_uid)
+        stats_table = PrettyTable(['Total Games', 'Wins', 'Losses', 'W/L Ratio'])
+        stats_table.add_row(stats)
+        print(stats_table)
+    
+    def do_updateuser(self, initial=None):
+        ('updateuser - Update the username or the userpassword. If no input is written '
+        'in any field, that field will not be updated.\n')  
+        if not self.user_uid:
+            print('No user is logged in currently.\n')
+            return
+        try:
+            self.username = input('New username: ')
+            if self.users_db.is_registered(self.username):
+                print(f'Username {self.username} is already taken.\n')
+                self.do_logout()
+                return
+            self.password_hash = utils.get_password_sha256(getpass('New password: '))
+        except EOFError:
+            return
+        if self.username and self.password_hash:
+            self.users_db.update_user(self.user_uid, self.username, self.password_hash)
+            print('User data updated correctly\n')
+            self.prompt = f'\n[{self.username}]>'
+    
+    def do_removeuser(self, initial=None):
+        'removeuser - Remove the current account and all its data.\n'
+        if not self.user_uid:
+            print('No user is logged in currently.\n')
+            return
+        self.users_db.remove_user(self.user_uid)
+        self.do_logout()
+        print('User removed successfully.\n')
 
-    positions = []
-    running = True
-    while running:
-        window.blit(bg_img, (0,0))
-        window.blits(map_tiles)
-        clock.tick(15)
-        #TABLE LINES
-        #UP
-        pygame.draw.line(window, (255, 0, 0), (25, 25), (const.WIDTH - 25, 25))
-        #DOWN
-        pygame.draw.line(window, (255, 0, 0), (25, const.HEIGHT-142), (const.WIDTH-25, const.HEIGHT-142))
-        #LEFT
-        pygame.draw.line(window, (255, 0, 0), (25, 25), (25, const.HEIGHT-142))
-        #RIGHT
-        pygame.draw.line(window, (255, 0, 0), (const.WIDTH - 25, 25), (const.WIDTH-25, const.HEIGHT-142))
+    def do_gamecreate(self, initial=None):
+        'gamecreate - Ask the server to create a new game.\n'
+        if not self.user_uid:
+            print('No user is logged in currently.\n')
+            return
+        try:
+            game_name = input('Game name: ')
+            if not game_name:
+                return
+            game_password = getpass('Game password: ')
+            if game_password:
+                game_password = utils.get_password_sha256(game_password)
+        except EOFError:
+            print('Game creation cancelled.\n')
+            return
+        print('\nCreating new game, please wait...\n')
+        print(f'New game created with ID: {self.server.new_game(self.username, game_name, game_password)}\n')
+        print('Game terminated.\n')
+    
+    def do_listgames(self, initial=None):
+        'listgames - List all the available games at the moment with their uid to join.\n'
+        if not self.user_uid:
+            print('You need an account to see the list of games.\n')
+            return
+        games_list = self.server.list_games()
+        self.last_gamelist = [game for game in games_list]
+        games_table = PrettyTable(["Index", "Name", "Creator", "Public", "Created On"])
+        for game, index in zip(games_list, range(len(list(games_list)))):
+            game_data = games_list[game]
+            games_table.add_row(
+                [index, game_data["name"], game_data["creator"],
+                game_data["public"], game_data["created_on"]])
+        print(games_table)
 
-        #BUTTONS LINES
-        #UP
-        pygame.draw.line(window, (255, 0, 0), (25, 562), (const.WIDTH - 25, 562))
-        #DOWN
-        pygame.draw.line(window, (255, 0, 0), (25, const.HEIGHT-5), (const.WIDTH-25, const.HEIGHT-5))
-        #COLUMNS
-        pygame.draw.line(window, (255, 0, 0), (25, 562), (25, const.HEIGHT-5))
-        pygame.draw.line(window, (255, 0, 0), (195, 562), (195, const.HEIGHT-5))
-        pygame.draw.line(window, (255, 0, 0), (380, 562), (380, const.HEIGHT-5))
-        pygame.draw.line(window, (255, 0, 0), (const.WIDTH - 25, 562), (const.WIDTH-25, const.HEIGHT-5))
+    def do_joingame(self, arg, initial=None):
+        'joingame <game index|game uid> - Given a uid, try to join to the respective game.\n'
+        if not self.user_uid:
+            print('You need an account to join a game.\n')
+            return
+        if arg.strip().isdigit() and self.last_gamelist:
+            try:
+                game_uid = self.last_gamelist[int(arg)]
+                game_data = self.server.get_game_data(game_uid)
+            except IndexError:
+                print(f'No game found in the games list with index {arg}.\n')
+                return
+        else:
+            game_data = self.server.get_game_data(arg.strip())
 
-        for i in range(1, 7):
-            #COLUMNS
-            pygame.draw.line(window, (255, 0, 0), (25 + const.BLOCKSIZE*i, 25), (const.BLOCKSIZE*i+25, const.HEIGHT-142))
-            #ROWS
-            pygame.draw.line(window, (255, 0, 0), (25, 25 + const.BLOCKSIZE*i), (const.HEIGHT-125, const.BLOCKSIZE*i+25))
+        print(f'\nJoining {arg}...\n')
+        if not game_data:
+            print(f'No game found with ID \'{arg.strip()}\'.\n')
+            return
+        print(game_data)
+        print('Game terminated.\n')
 
-        mill_p1_img = scale_img("assets/image/mill_p1.png", (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
-        mill_p2_img = scale_img("assets/image/mill_p2.png", (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
 
-        saved_state = State(state_num, p1_tiles, p2_tiles, 0, 0, turn)
+    def do_exit(self, initial=None):
+        'exit - Stop and exit the application.\n'
+        return self.close()
 
-        for event in pygame.event.get():
-            if event.type == pygame.MOUSEBUTTONUP:
-                pos = pygame.mouse.get_pos()
-                if not (pos[0] < 25 or pos[1] < 25 or pos[0] > const.HEIGHT - 125 or pos[1] > const.WIDTH - 25):
-                    pcords = parse_coords(pos)
-                    positions.append(pcords)
-                    print(positions)
-                    if turn == 1:
-                        p1_tiles.append(pcords)
-                    if turn == -1:
-                        p2_tiles.append(pcords)
-                    turn *= -1
-                    saved_state = State(state_num, p1_tiles, p2_tiles, 0, 0, turn)
-                if (pos[0] > 25 and pos[0] < 195 and pos[1] > 562 and pos[1] < const.HEIGHT-5):
-                    saved_state.save_state()
-                    state_num += 1
-                    print("State saved")
-                if (pos[0] > 195 and pos[0] < 380 and pos[1] > 562 and pos[1] < const.HEIGHT-5):
-                    bg_img = pygame.image.load(const.BOARD)
-                    bg_img = pygame.transform.scale(bg_img,(const.WIDTH, const.HEIGHT))
-                    map_tiles.clear()
-                    p1_tiles.clear()
-                    p2_tiles.clear()
-                    p1_tiles, p2_tiles, turn = saved_state.load_state()
-                    print("State loaded")
-                if (pos[0] > 380 and pos[0] < const.WIDTH - 25 and pos[1] > 562 and pos[1] < const.HEIGHT-5):
-                    map_tiles.clear()
-                    p1_tiles.clear()
-                    p2_tiles.clear()
-                    positions.clear()
-                    print("Emptied board")
-            elif event.type == KEYDOWN:
-                if event.key == K_ESCAPE:
-                    running = False
-                elif event.key == K_s:
-                    saved_state.save_state()
-                    state_num += 1
-                    print("State saved")
-                elif event.key == K_r:
-                    bg_img = pygame.image.load(const.BOARD)
-                    bg_img = pygame.transform.scale(bg_img,(const.WIDTH, const.HEIGHT))
-                    map_tiles.clear()
-                    p1_tiles.clear()
-                    p2_tiles.clear()
-                    p1_tiles, p2_tiles, turn = saved_state.load_state()
-                    print("State loaded")
-            elif event.type == QUIT:
-                running = False
-                print("Bye!")
+    def close(self):
+        return True
 
-        for p1_tile in p1_tiles:
-            rect = mill_p1_img.get_rect(center = unparse_coords(p1_tile))
-            map_tiles.append((mill_p1_img, rect))
-        
-        for p2_tile in p2_tiles:
-            rect = mill_p2_img.get_rect(center = unparse_coords(p2_tile))
-            map_tiles.append((mill_p2_img, rect))
 
-        #window.blits()
-        pygame.display.update()
-    pygame.quit()
-
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    game = main()
+    try:
+        game.cmdloop()
+    except KeyboardInterrupt:
+        game.close()
