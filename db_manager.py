@@ -5,13 +5,12 @@ class UserDB():
     '''Objeto para acceso a la db de usuarios'''
     def __init__(self, database='users.db'):
         '''Selección de la base de datos.'''
-        self.database = const.USERS_DATABASE_DIR + database
+        self.database = const.DATABASES_DIR + database
         self.create_table()
 
     def _create_connection(self, database_file):
         '''Crea la conexión.'''
         conn = sqlite3.connect(database_file)
-        conn.row_factory = lambda cursor, row: row[0]
         return conn
 
     def drop_table(self):
@@ -63,6 +62,8 @@ class UserDB():
             cursor = conn.cursor()
             cursor.execute(exist_sql)
             user_uid = cursor.fetchone()
+            if user_uid:
+                user_uid = user_uid[0]
         conn.close()
         return user_uid
 
@@ -72,6 +73,16 @@ class UserDB():
         with self._create_connection(self.database) as conn:
             cursor = conn.cursor()
             cursor.execute(add_sql)
+            conn.commit()
+        conn.close()
+    
+    def update_user(self, user_id, username, password_hash):
+        '''Actualiza los datos de un usuario dado su uid.'''
+        update_user_sql = f"UPDATE users SET username='{username}',password='{password_hash}' " + \
+            f"WHERE uid='{user_id}'"
+        with self._create_connection(self.database) as conn:
+            cursor = conn.cursor()
+            cursor.execute(update_user_sql)
             conn.commit()
         conn.close()
 
@@ -95,6 +106,8 @@ class UserDB():
             cursor = conn.cursor()
             cursor.execute(get_id_by_name_sql)
             result = cursor.fetchone()
+            if result:
+                result = result[0]
         return result
 
     def get_name_by_id(self, user_id):
@@ -103,6 +116,17 @@ class UserDB():
         with self._create_connection(self.database) as conn:
             cursor = conn.cursor()
             cursor.execute(get_by_name_sql)
+            result = cursor.fetchone()
+            if result:
+                result = result[0]
+        return result
+
+    def get_stats(self, user_id):
+        '''Obtiene las stats (Wins, Losses, Total_Games, Ratio) dado un uid de usuario'''
+        get_stats_sql = f"SELECT total_games,wins,losses,ratio FROM users WHERE uid='{user_id}'"
+        with self._create_connection(self.database) as conn:
+            cursor = conn.cursor()
+            cursor.execute(get_stats_sql)
             result = cursor.fetchone()
         return result
 

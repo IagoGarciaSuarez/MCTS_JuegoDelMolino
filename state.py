@@ -21,7 +21,7 @@ from tile import Tile
 
 class State:
     '''La clase estado corresponde a la clase tablero.'''
-    def __init__(self, state_id, p1_positions, p2_positions, p1_n_tiles, p2_n_tiles, turn):
+    def __init__(self, state_id, p1_positions=[], p2_positions=[], p1_n_tiles=9, p2_n_tiles=9, turn=0):
         '''Inicialización de la clase estado correspondiente al tablero.'''
         self.__state_id = state_id
         self.__p1_positions = p1_positions
@@ -29,9 +29,8 @@ class State:
         self.__p1_n_tiles = p1_n_tiles
         self.__p2_n_tiles = p2_n_tiles
         self.__turn = turn
-
-    def save_state(self):
-        '''Guardado del último estado en un archivo JSON.'''
+    
+    def __repr__(self) -> str:
         state_data = {
             "state_id": self.__state_id,
             "p1_positions": self.__p1_positions,
@@ -40,11 +39,20 @@ class State:
             "p2_n_tiles": self.__p2_n_tiles,
             "turn": self.__turn
         }
+        return state_data
+    
+    def __str__(self) -> str:
+        return json.dumps(self.__repr__())
+    @property
+    def get_state_id(self):
+        return self.__state_id
 
+    def save_state(self):
+        '''Guardado del último estado en un archivo JSON.'''
         with open(const.STATES_JSON, 'w') as states_file:
-            json.dump(state_data, states_file)
+            json.dump(self, states_file)
 
-        print(state_data)
+        print(self)
         #logs.info("Estado actual de la partida guardado correctamente.")
     
     def load_state(self):
