@@ -2,9 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import cmd
-import string
-from tokenize import String
-from server import Server
+from server.server_manager import ServerManager
 import utils
 import uuid
 from prettytable import PrettyTable
@@ -18,7 +16,7 @@ class main(cmd.Cmd):
     password_hash = None
     last_gamelist = None
     users_db = UserDB()
-    server = Server()
+    server = ServerManager()
 
     def do_login(self, initial=None):
         'login - Log into the system with an existing account.\n'
