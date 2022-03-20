@@ -1,15 +1,15 @@
-WIDTH = 575
-HEIGHT = 675
-BOARD = 'assets/image/board2.png'
+WIDTH = 700
+HEIGHT = 600
+BOARD = 'assets/image/BOARD.png'
 MUSIC = 'assets/audio/bg_music.mp3'
-P1_TILE_IMG = 'assets/image/mill_p1.png'
-P2_TILE_IMG = 'assets/image/mill_p2.png'
+P1_TILE_IMG = 'assets/image/P1.png'
+P2_TILE_IMG = 'assets/image/P2.png'
 STATES_JSON = 'persistence/saved_state.json'
 LOGS_DIR = 'logs/'
 DATABASES_DIR = 'data/'
 GAMES_JSON = 'games.json'
 LOGO = BOARD
-BLOCKSIZE = 75
+BLOCKSIZE = 68
 BOARD_POSITIONS = {
     "[0, 0]": [[3, 0], [0, 3]],
     "[3, 0]": [[0, 0], [3, 1], [6, 0]],
@@ -36,3 +36,4 @@ BOARD_POSITIONS = {
     "[3, 6]": [[3, 5], [0, 6], [6, 6]],
     "[6, 6]": [[6, 3], [3, 6]]
 }
+VALID_POSITIONS = [[0, 0],[3, 0],[6, 0],[1, 1],[3, 1],[5, 1],[2, 2],[3, 2],[4, 2],[0, 3],[1, 3],[2, 3],[4, 3],[5, 3],[6, 3],[2, 4],[3, 4],[4, 4],[1, 5],[3, 5],[4, 4],[1, 5],[3, 5],[5, 5],[0, 6],[3, 6],[6, 6]]
