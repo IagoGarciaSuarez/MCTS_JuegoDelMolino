@@ -7,7 +7,7 @@ def parse_coords(coords):
 	return [int((coords[0] - 111)/const.BLOCKSIZE), int((coords[1] - 61)/const.BLOCKSIZE)]
 
 def unparse_coords(coords):
-    return [coords[0]*const.BLOCKSIZE + 111 + const.BLOCKSIZE*0.5, coords[1]*const.BLOCKSIZE + 61 + const.BLOCKSIZE*0.5]
+    return [coords[0]*const.BLOCKSIZE + 105 + const.BLOCKSIZE*0.5, coords[1]*const.BLOCKSIZE + 50 + const.BLOCKSIZE*0.5]
 
 def scale_img(route, size):
 	img = pygame.image.load(route)
