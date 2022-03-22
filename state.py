@@ -25,21 +25,21 @@ class State:
         '''Inicialización de la clase estado correspondiente al tablero.'''
         self.__state_id = state_id
         self.p1_positions = p1_positions
-        self.__p2_positions = p2_positions
-        self.__p1_n_tiles = p1_n_tiles
-        self.__p2_n_tiles = p2_n_tiles
-        self.__turn = turn
-        self.__game_state = game_state
-    
-    def __repr__(self) -> str:
+        self.p2_positions = p2_positions
+        self.p1_n_tiles = p1_n_tiles
+        self.p2_n_tiles = p2_n_tiles
+        self.turn = turn
+        self.game_state = game_state
+
+    def __dict__(self):
         state_data = {
             "state_id": self.__state_id,
-            "p1_positions": self.__p1_positions,
-            "p2_positions": self.__p2_positions,
-            "p1_n_tiles": self.__p1_n_tiles,
-            "p2_n_tiles": self.__p2_n_tiles,
-            "turn": self.__turn,
-            "game_state": self.__game_state
+            "p1_positions": self.p1_positions,
+            "p2_positions": self.p2_positions,
+            "p1_n_tiles": self.p1_n_tiles,
+            "p2_n_tiles": self.p2_n_tiles,
+            "turn": self.turn,
+            "game_state": self.game_state
         }
         return state_data
     
@@ -102,6 +102,3 @@ class State:
         if str(movement.final_pos) not in const.BOARD_POSITIONS or \
             movement.final_pos not in const.BOARD_POSITIONS[str(movement.initial_pos)]:
             return False
-        
-
-        
