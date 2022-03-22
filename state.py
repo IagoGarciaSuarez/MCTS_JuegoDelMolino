@@ -25,26 +25,26 @@ class State:
         '''Inicialización de la clase estado correspondiente al tablero.'''
         self.__state_id = state_id
         self.p1_positions = p1_positions
-        self.__p2_positions = p2_positions
-        self.__p1_n_tiles = p1_n_tiles
-        self.__p2_n_tiles = p2_n_tiles
-        self.__turn = turn
-        self.__game_state = game_state
-    
-    def __repr__(self) -> str:
+        self.p2_positions = p2_positions
+        self.p1_n_tiles = p1_n_tiles
+        self.p2_n_tiles = p2_n_tiles
+        self.turn = turn
+        self.game_state = game_state
+
+    def __dict__(self):
         state_data = {
             "state_id": self.__state_id,
-            "p1_positions": self.__p1_positions,
-            "p2_positions": self.__p2_positions,
-            "p1_n_tiles": self.__p1_n_tiles,
-            "p2_n_tiles": self.__p2_n_tiles,
-            "turn": self.__turn,
-            "game_state": self.__game_state
+            "p1_positions": self.p1_positions,
+            "p2_positions": self.p2_positions,
+            "p1_n_tiles": self.p1_n_tiles,
+            "p2_n_tiles": self.p2_n_tiles,
+            "turn": self.turn,
+            "game_state": self.game_state
         }
         return state_data
     
     def __str__(self) -> str:
-        return json.dumps(self.__repr__())
+        return json.dumps(self.__dict__)
     @property
     def get_state_id(self):
         return self.__state_id
@@ -57,25 +57,25 @@ class State:
         print(self)
         #logs.info("Estado actual de la partida guardado correctamente.")
     
-    def load_state(self):
-        '''Carga del último estado guardado a partir de un JSON.'''
-        with open(const.STATES_JSON, 'r') as states_file:
-            state_data = json.load(states_file)
+    def load_state(self, state_data):
+        # '''Carga del último estado guardado a partir de un JSON.'''
+        # with open(const.STATES_JSON, 'r') as states_file:
+        #     state_data = json.load(states_file)
         
         self.__state_id = state_data["state_id"]
-        self.__p1_positions = state_data["p1_positions"]
-        self.__p2_positions = state_data["p2_positions"]
-        self.__p1_n_tiles = state_data["p1_n_tiles"]
-        self.__p2_n_tiles = state_data["p2_n_tiles"]
-        self.__turn = state_data["turn"]
+        self.p1_positions = state_data["p1_positions"]
+        self.p2_positions = state_data["p2_positions"]
+        self.p1_n_tiles = state_data["p1_n_tiles"]
+        self.p2_n_tiles = state_data["p2_n_tiles"]
+        self.turn = state_data["turn"]
 
         #logs.info("Última partida guardada cargada correctamente.")
 
     def get_tile_data(self, position):
         '''Genera una instancia de Tile con los datos de una ficha dada una posición del tablero.'''
-        if position in const.BOARD_POSITIONS and position in self.__p1_positions:
+        if position in const.BOARD_POSITIONS and position in self.p1_positions:
             return Tile(position, 0)
-        elif position in const.BOARD_POSITIONS and position in self.__p2_positions:
+        elif position in const.BOARD_POSITIONS and position in self.p2_positions:
             return Tile(position, 1)
 
     def validate_movement(self, movement: Movement):
@@ -91,6 +91,3 @@ class State:
         if str(movement.final_pos) not in const.BOARD_POSITIONS or \
             movement.final_pos not in const.BOARD_POSITIONS[str(movement.initial_pos)]:
             return False
-        
-
-        
