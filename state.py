@@ -21,23 +21,25 @@ from tile import Tile
 
 class State:
     '''La clase estado corresponde a la clase tablero.'''
-    def __init__(self, state_id, p1_positions=[], p2_positions=[], p1_n_tiles=9, p2_n_tiles=9, turn=0):
+    def __init__(self, state_id, p1_positions=[], p2_positions=[], p1_n_tiles=9, p2_n_tiles=9, turn=0, game_state=""):
         '''Inicialización de la clase estado correspondiente al tablero.'''
         self.__state_id = state_id
         self.p1_positions = p1_positions
-        self.p2_positions = p2_positions
-        self.p1_n_tiles = p1_n_tiles
-        self.p2_n_tiles = p2_n_tiles
-        self.turn = turn
-
-    def __dict__(self):
+        self.__p2_positions = p2_positions
+        self.__p1_n_tiles = p1_n_tiles
+        self.__p2_n_tiles = p2_n_tiles
+        self.__turn = turn
+        self.__game_state = game_state
+    
+    def __repr__(self) -> str:
         state_data = {
             "state_id": self.__state_id,
-            "p1_positions": self.p1_positions,
-            "p2_positions": self.p2_positions,
-            "p1_n_tiles": self.p1_n_tiles,
-            "p2_n_tiles": self.p2_n_tiles,
-            "turn": self.turn
+            "p1_positions": self.__p1_positions,
+            "p2_positions": self.__p2_positions,
+            "p1_n_tiles": self.__p1_n_tiles,
+            "p2_n_tiles": self.__p2_n_tiles,
+            "turn": self.__turn,
+            "game_state": self.__game_state
         }
         return state_data
     
