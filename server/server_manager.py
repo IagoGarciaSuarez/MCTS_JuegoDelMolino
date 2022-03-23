@@ -105,13 +105,11 @@ class ServerManager:
             state.p1_positions.append(movement.final_pos)
             if movement.kill_tile:
                 state.p2_positions.remove(movement.kill_tile)
-                state.p2_n_tiles -= 1
         else:
             if movement.initial_pos:
                 state.p2_positions.remove(movement.initial_pos)
             state.p2_positions.append(movement.final_pos)
             if movement.kill_tile:
-                state.p1_positions.remove(movement.kill_tile)
-                state.p1_n_tiles -= 1      
+                state.p1_positions.remove(movement.kill_tile)     
         state.turn += 1 
         return state.__dict__()

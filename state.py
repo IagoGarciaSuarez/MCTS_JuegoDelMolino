@@ -89,16 +89,65 @@ class State:
         elif position in const.BOARD_POSITIONS and position in self.p2_positions:
             return Tile(position, 1)
 
-    def validate_movement(self, movement: Movement):
-        '''
-        Verificación del movimiento con forma (pos_inicial, pos_final).
-        Comprueba si existe una ficha en la posición inicial, 
-        si está viva y si la posición objetivo existe y es alcanzable
-        desde la posición inicial.
-        '''
-        tile = self.get_tile_data(movement.initial_pos)
-        if not tile or not tile.alive:
-            return False
-        if str(movement.final_pos) not in const.BOARD_POSITIONS or \
-            movement.final_pos not in const.BOARD_POSITIONS[str(movement.initial_pos)]:
-            return False
+    def validate_movement(self, movement):
+        movement = Movement(**movement)
+        turn = self.turn % 2
+        if turn == 0:
+            my_pos_tiles = self.p1_positions
+            my_n_tiles = self.p1_n_tiles
+        else:
+            my_pos_tiles = self.p2_positions
+            my_n_tiles = self.p2_n_tiles
+
+        if not movement.initial_pos:
+            if (my_n_tiles - len(my_pos_tiles)) <= 0:
+                print("Tiles: ", (my_n_tiles - len(my_pos_tiles)))
+                return False
+        else:
+            tile = self.get_tile_data(movement.initial_pos)
+            if not tile or not tile.alive:
+                print("No tile")
+                return False
+            if movement.final_pos not in const.BOARD_POSITIONS[str(movement.initial_pos)] or \
+                movement.final_pos in self.p1_positions + self.p2_positions:
+                print("No valid final pos")
+                return False
+        if movement.kill_tile and self.is_line(self, movement, my_pos_tiles):
+            tile = self.get_tile_data(movement.kill_tile)
+            if not tile or not tile.alive or tile.player == turn:
+                return False
+        return True
+
+    def is_line(self, movement: Movement, player_positions):
+        positions = [pos for pos in player_positions if pos != movement.initial_pos]
+        line_counter = 1
+        for pos in positions:
+            if pos[0] == movement.final_pos[0]:
+                line_counter += 1
+            if line_counter >= 3:
+                return True
+        line_counter = 1
+        for pos in positions:
+            if pos[1] == movement.final_pos[1]:
+                line_counter += 1
+            if line_counter >= 3:
+                return True
+        return False
+    
+    def make_movement(self, movement):
+        movement = Movement(**dict(movement))
+        turn = self.turn % 2
+        if turn == 0:
+            if movement.initial_pos:
+                self.p1_positions.remove(movement.initial_pos)
+            self.p1_positions.append(movement.final_pos)
+            if movement.kill_tile:
+                self.p2_positions.remove(movement.kill_tile)
+        else:
+            if movement.initial_pos:
+                self.p2_positions.remove(movement.initial_pos)
+            self.p2_positions.append(movement.final_pos)
+            if movement.kill_tile:
+                self.p1_positions.remove(movement.kill_tile)     
+        self.turn += 1 
+        return self.__dict__()
