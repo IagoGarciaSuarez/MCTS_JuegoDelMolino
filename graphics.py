@@ -42,6 +42,7 @@ class Graphics:
         
         map_tiles = [] 
         positions:List = p1_tiles + p2_tiles  #POSICIONES DE TODAS LAS FICHAS EN EL TABLERO
+        positions_to_move=[]
         available_positions = const.VALID_POSITIONS  #POSICIONES SIN OCUPAR EN EL TABLERO
         if(len(p1_tiles) > 0 or len(p2_tiles) > 0):
                 for i in positions:
@@ -82,22 +83,68 @@ class Graphics:
                                 pcords = parse_coords(pos)
                                 positions.append(pcords)
                                 print(positions)
+                                #P1
                                 if self.state.turn % 2 == 0:
                                     p1_tiles.append(pcords)
                                     available_positions.remove(pcords)
                                     self.state.p1_n_tiles -= 1
-                                if self.state.turn % 2 == 1:
+                                #P2
+                                if self.state.turn % 2 != 0:
                                     p2_tiles.append(pcords)
                                     available_positions.remove(pcords)
                                     self.state.p2_n_tiles -= 1
-                                self.state.turn += 1
-                        else: 
-                            if(parse_coords(pos) in const.VALID_POSITIONS):                          
-                                if self.state.turn % 2 == 0:
-                                    #selectedTailP1 = True 
-                                    print("por implementar")   
-                                if self.state.turn % 2 == 1:
-                                    print("por implementar")
+                                self.state.turn  += 1
+                        else:
+                            
+                            #P1
+                            if(parse_coords(pos) in p1_tiles and self.state.turn % 2 == 0): 
+                                positions_to_move = []
+                                pcords = parse_coords(pos)
+                                coord = unparse_coords(pcords) 
+                                selectedTailP1 = True
+                                toDelatePosition = pcords                                                     
+                                for i in const.BOARD_POSITIONS['['+str(pcords[0])+', '+str(pcords[1])+']']:
+                                    if i in available_positions:                            
+                                        positions_to_move.append(i)
+                                        selectedTailP11 = True
+                            if (parse_coords(pos) in positions_to_move and self.state.turn % 2 == 0 and selectedTailP11):
+                                pcords2 = parse_coords(pos) 
+                                p1_tiles.append(pcords2)
+                                p1_tiles.remove(toDelatePosition)
+                                available_positions.append(toDelatePosition)
+                                available_positions.remove(pcords2)
+                                map_tiles.clear()
+                                rectAppend = p1_img.get_rect(center = unparse_coords(pcords2))
+                                map_tiles.append((p1_img, rectAppend))                                                          
+                                #ACTUALIZACION ESTADOS
+                                selectedTailP1 = False
+                                selectedTailP11 = False
+                                self.state.turn  += 1
+                            #P2
+                            if (parse_coords(pos) in p2_tiles and self.state.turn % 2 != 0):
+                                positions_to_move = []
+                                pcords = parse_coords(pos)
+                                coord = unparse_coords(pcords) 
+                                selectedTailP2 = True
+                                toDelatePosition = pcords                                                      
+                                for i in const.BOARD_POSITIONS['['+str(pcords[0])+', '+str(pcords[1])+']']:
+                                    if i in available_positions:                            
+                                        positions_to_move.append(i)
+                                        selectedTailP22 = True
+                            if (parse_coords(pos) in positions_to_move and self.state.turn % 2 != 0 and selectedTailP22):
+                                pcords2 = parse_coords(pos) 
+                                p2_tiles.append(pcords2)
+                                p2_tiles.remove(toDelatePosition)
+                                available_positions.append(toDelatePosition)
+                                available_positions.remove(pcords2)
+                                map_tiles.clear()
+                                rectAppend = p2_img.get_rect(center = unparse_coords(pcords2))
+                                map_tiles.append((p2_img, rectAppend))
+                                #ACTUALIZACION ESTADOS                                
+                                selectedTailP2 = False
+                                selectedTailP22 = False
+                                self.state.turn  += 1
+
                     if (pos[0] > const.WIDTH-65 and pos[0] < const.WIDTH and pos[1] > 0 and pos[1] < 65):
                         print("Tablas")
                         self.state.game_state = "Tablas"
@@ -126,36 +173,28 @@ class Graphics:
                 for i in available_positions:
                     coords = unparse_coords(i)
                     window.blit(available_pos, coords)
-
-            #FICHAS YA COLOCADAS
-            if(selectedTailP1):
-                if(parse_coords(pos) in p1_tiles):
-                    #no_options_position = True
-                    positions_to_move=[]
-                    pcords = parse_coords(pos)
-                    coord = unparse_coords(pcords)                  
-                    for i in const.BOARD_POSITIONS['['+str(pcords[0])+', '+str(pcords[1])+']']:
-                        if i in available_positions:                            
-                            positions_to_move.append(i)
-                            if positions_to_move:
-                                window.blit(selected_pos_green, coord)
-                            else:
-                                window.blit(selected_pos_red, coord) #no funciona
-
-                            coords = unparse_coords(i)
-                            window.blit(available_pos, coords)
-                    
-                    if(parse_coords(pos) in positions_to_move):
-                        new_coord = parse_coords(pos)
-                        p1_tiles.remove(pcords)
-                        p1_tiles.append(new_coord)
-                        available_positions.remove(parse_coords(pos))
-                        available_positions.append(parse_coords(pos))
-                        self.state.turn  *= -1
-                        selectedTailP1 = False
-
-                            
-            #COLOCACIÓN DE FICHAS                
+            elif(selectedTailP1):
+                if positions_to_move:
+                    ncord = selected_pos_green.get_rect(center = coord)
+                    window.blit(selected_pos_green, ncord)                
+                    for i in positions_to_move:                            
+                        coords = unparse_coords(i)
+                        window.blit(available_pos, coords)
+                else:
+                    ncord = selected_pos_red.get_rect(center = coord)
+                    window.blit(selected_pos_red, ncord)
+            elif(selectedTailP2):
+                if positions_to_move:
+                    ncord = selected_pos_green.get_rect(center = coord)
+                    window.blit(selected_pos_green, ncord)                
+                    for i in positions_to_move:                            
+                        coords = unparse_coords(i)
+                        window.blit(available_pos, coords)
+                else:
+                    ncord = selected_pos_red.get_rect(center = coord)
+                    window.blit(selected_pos_red, ncord)
+                
+            #COLOCACIÓN DE FICHAS P1 Y P2
             for p1_tile in p1_tiles:
                 rect = p1_img.get_rect(center = unparse_coords(p1_tile))
                 map_tiles.append((p1_img, rect))
@@ -166,4 +205,11 @@ class Graphics:
 
             pygame.display.update()            
         pygame.quit()
-        return self.state.__dict__()
+
+
+
+
+state = State(1,[[2, 4], [0, 0], [6, 3], [4, 3], [3, 0], [5, 5], [4, 2], [6, 6], [1, 5]],[[2, 3], [6, 0], [3, 6], [3, 1], [0, 3], [0, 6], [5, 1], [1, 1], [1, 3]],0,0,0,"Prueba")
+state1 = State(1,[],[],9,9,0,"Prueba")
+graphics = Graphics(state)
+graphics.game()
