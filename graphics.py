@@ -1,142 +1,169 @@
-import pygame
-from pygame.locals import (
-    K_ESCAPE,
-    K_s,
-    K_r,
-    KEYDOWN,
-    QUIT,
-)
-import const
-import json
+from typing import List
 from utils import parse_coords, scale_img, unparse_coords
 from state import State
+import const
+import pygame
+from pygame.locals import *
 
-def main():
-    pygame.init()
-    pygame.mixer.init()
-    pygame.mixer.music.load(const.MUSIC)
-    pygame.mixer.music.set_volume(0.1)
-    pygame.mixer.music.play(-1)
+class Graphics:
 
-    clock = pygame.time.Clock()
+    def __init__(self, state: State = State(None)):
+        self.state = state
 
-    window = pygame.display.set_mode((const.WIDTH, const.HEIGHT))
-    pygame.display.set_caption('Juego del Molino')
-    pygame.display.set_icon(pygame.image.load(const.LOGO))
+    def game(self):
+        #INICIO
+        pygame.init()
+        pygame.mixer.init()
+        pygame.mixer.music.load(const.MUSIC)
+        pygame.mixer.music.set_volume(0.1)
+        pygame.mixer.music.play(-1)
 
-    bg_img = pygame.image.load(const.BOARD)
-    bg_img = pygame.transform.scale(bg_img,(const.WIDTH, const.HEIGHT))
+        clock = pygame.time.Clock()
 
-    map_tiles = []
-    p1_tiles = []
-    p2_tiles = []
-    turn = 1
-    state_num = 0
-    last_state = None
+        window = pygame.display.set_mode((const.WIDTH, const.HEIGHT))
+        pygame.display.set_caption('Juego del Molino')
+        pygame.display.set_icon(pygame.image.load(const.LOGO))
+        font = pygame.font.Font(None, 60)
 
-    #Button
-    smallfont = pygame.font.SysFont('Corbel',35)
-    text = smallfont.render('Save' , True , (255,255,255))
+        #IMAGENES
+        bg_img = pygame.image.load(const.BOARD)
+        bg_img = pygame.transform.scale(bg_img,(const.WIDTH, const.HEIGHT))
+        p1_img_scoreboard = pygame.image.load(const.P1_TILE_IMG)
+        p2_img_scoreboard = pygame.image.load(const.P2_TILE_IMG)
+        p1_img  = scale_img(const.P1_TILE_IMG, (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
+        p2_img = scale_img(const.P2_TILE_IMG, (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
+        available_pos = pygame.image.load(const.AVAILABLE_POSITION)
+        selected_pos_green = scale_img(const.SELECTED_POSITION_GREEN, (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
+        selected_pos_red = scale_img(const.SELECTED_POSITION_RED, (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
 
-    positions = []
-    running = True
-    while running:
-        window.blit(bg_img, (0,0))
-        window.blits(map_tiles)
-        clock.tick(15)
-        #TABLE LINES
-        #UP
-        pygame.draw.line(window, (255, 0, 0), (25, 25), (const.WIDTH - 25, 25))
-        #DOWN
-        pygame.draw.line(window, (255, 0, 0), (25, const.HEIGHT-142), (const.WIDTH-25, const.HEIGHT-142))
-        #LEFT
-        pygame.draw.line(window, (255, 0, 0), (25, 25), (25, const.HEIGHT-142))
-        #RIGHT
-        pygame.draw.line(window, (255, 0, 0), (const.WIDTH - 25, 25), (const.WIDTH-25, const.HEIGHT-142))
-
-        #BUTTONS LINES
-        #UP
-        pygame.draw.line(window, (255, 0, 0), (25, 562), (const.WIDTH - 25, 562))
-        #DOWN
-        pygame.draw.line(window, (255, 0, 0), (25, const.HEIGHT-5), (const.WIDTH-25, const.HEIGHT-5))
-        #COLUMNS
-        pygame.draw.line(window, (255, 0, 0), (25, 562), (25, const.HEIGHT-5))
-        pygame.draw.line(window, (255, 0, 0), (195, 562), (195, const.HEIGHT-5))
-        pygame.draw.line(window, (255, 0, 0), (380, 562), (380, const.HEIGHT-5))
-        pygame.draw.line(window, (255, 0, 0), (const.WIDTH - 25, 562), (const.WIDTH-25, const.HEIGHT-5))
-
-        for i in range(1, 7):
-            #COLUMNS
-            pygame.draw.line(window, (255, 0, 0), (25 + const.BLOCKSIZE*i, 25), (const.BLOCKSIZE*i+25, const.HEIGHT-142))
-            #ROWS
-            pygame.draw.line(window, (255, 0, 0), (25, 25 + const.BLOCKSIZE*i), (const.HEIGHT-125, const.BLOCKSIZE*i+25))
-
-        mill_p1_img = scale_img("assets/image/mill_p1.png", (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
-        mill_p2_img = scale_img("assets/image/mill_p2.png", (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
-
-        saved_state = State(state_num, p1_tiles, p2_tiles, 0, 0, turn)
-
-        for event in pygame.event.get():
-            if event.type == pygame.MOUSEBUTTONUP:
-                pos = pygame.mouse.get_pos()
-                if not (pos[0] < 25 or pos[1] < 25 or pos[0] > const.HEIGHT - 125 or pos[1] > const.WIDTH - 25):
-                    pcords = parse_coords(pos)
-                    positions.append(pcords)
-                    print(positions)
-                    if turn == 1:
-                        p1_tiles.append(pcords)
-                    if turn == -1:
-                        p2_tiles.append(pcords)
-                    turn *= -1
-                    saved_state = State(state_num, p1_tiles, p2_tiles, 0, 0, turn)
-                if (pos[0] > 25 and pos[0] < 195 and pos[1] > 562 and pos[1] < const.HEIGHT-5):
-                    saved_state.save_state()
-                    state_num += 1
-                    print("State saved")
-                if (pos[0] > 195 and pos[0] < 380 and pos[1] > 562 and pos[1] < const.HEIGHT-5):
-                    bg_img = pygame.image.load(const.BOARD)
-                    bg_img = pygame.transform.scale(bg_img,(const.WIDTH, const.HEIGHT))
-                    map_tiles.clear()
-                    p1_tiles.clear()
-                    p2_tiles.clear()
-                    p1_tiles, p2_tiles, turn = saved_state.load_state()
-                    print("State loaded")
-                if (pos[0] > 380 and pos[0] < const.WIDTH - 25 and pos[1] > 562 and pos[1] < const.HEIGHT-5):
-                    map_tiles.clear()
-                    p1_tiles.clear()
-                    p2_tiles.clear()
-                    positions.clear()
-                    print("Emptied board")
-            elif event.type == KEYDOWN:
-                if event.key == K_ESCAPE:
-                    running = False
-                elif event.key == K_s:
-                    saved_state.save_state()
-                    state_num += 1
-                    print("State saved")
-                elif event.key == K_r:
-                    bg_img = pygame.image.load(const.BOARD)
-                    bg_img = pygame.transform.scale(bg_img,(const.WIDTH, const.HEIGHT))
-                    map_tiles.clear()
-                    p1_tiles.clear()
-                    p2_tiles.clear()
-                    p1_tiles, p2_tiles, turn = saved_state.load_state()
-                    print("State loaded")
-            elif event.type == QUIT:
-                running = False
-                print("Bye!")
-
-        for p1_tile in p1_tiles:
-            rect = mill_p1_img.get_rect(center = unparse_coords(p1_tile))
-            map_tiles.append((mill_p1_img, rect))
+        #VARIABLES
+        p1_tiles:List = self.state.p1_positions
+        p2_tiles:List = self.state.p2_positions
         
-        for p2_tile in p2_tiles:
-            rect = mill_p2_img.get_rect(center = unparse_coords(p2_tile))
-            map_tiles.append((mill_p2_img, rect))
+        map_tiles = [] 
+        positions:List = p1_tiles + p2_tiles  #POSICIONES DE TODAS LAS FICHAS EN EL TABLERO
+        available_positions = const.VALID_POSITIONS  #POSICIONES SIN OCUPAR EN EL TABLERO
+        if(len(p1_tiles) > 0 or len(p2_tiles) > 0):
+                for i in positions:
+                    available_positions.remove(i)
+        running = True
+        selectedTailP1 = False
+        selectedTailP11 = False
+        selectedTailP2 = False
+        selectedTailP22 = False
 
-        #window.blits()
-        pygame.display.update()
-    pygame.quit()
+        while running:
+            #TABLERO
+            window.blit(bg_img, (0,0))
+            #FICHAS
+            window.blits(map_tiles)
+            #MARCADORES
+            scoreboard_p1_tiles = font.render(str(self.state.p1_n_tiles), 1, (255, 255, 255))
+            window.blit(scoreboard_p1_tiles, (45,225))  
+            scoreboard_p2_tiles = font.render(str(self.state.p2_n_tiles), 1, (255, 255, 255))          
+            window.blit(scoreboard_p2_tiles, (const.WIDTH-65,225))
+            scoreboard_p1_dead_tiles = font.render(str(const.MAX_FICHAS-self.state.p1_n_tiles-len(p1_tiles)), 1, (255, 255, 255))
+            window.blit(scoreboard_p1_dead_tiles, (45,415))
+            scoreboard_p2_dead_tiles = font.render(str(const.MAX_FICHAS-self.state.p2_n_tiles-len(p2_tiles)), 1, (255, 255, 255))
+            window.blit(scoreboard_p2_dead_tiles, (const.WIDTH-65,415)) 
+            #TURNO
+            if(self.state.turn % 2 == 0):
+                window.blit(p1_img_scoreboard, (472,552))
+            else: 
+                window.blit(p2_img_scoreboard, (472,552))
+            
+            #MOUSE O KEYBOARD
+            for event in pygame.event.get():
+                if event.type == pygame.MOUSEBUTTONUP:
+                    pos = pygame.mouse.get_pos()
+                    if not (pos[0] < 111 or pos[1] < 61 or pos[0] > const.HEIGHT - 15 or pos[1] > const.WIDTH - 164):
+                        if (self.state.p1_n_tiles != 0) or (self.state.p2_n_tiles != 0):
+                            if(parse_coords(pos) in const.VALID_POSITIONS and parse_coords(pos) not in positions):
+                                pcords = parse_coords(pos)
+                                positions.append(pcords)
+                                print(positions)
+                                if self.state.turn % 2 == 0:
+                                    p1_tiles.append(pcords)
+                                    available_positions.remove(pcords)
+                                    self.state.p1_n_tiles -= 1
+                                if self.state.turn % 2 == 1:
+                                    p2_tiles.append(pcords)
+                                    available_positions.remove(pcords)
+                                    self.state.p2_n_tiles -= 1
+                                self.state.turn += 1
+                        else: 
+                            if(parse_coords(pos) in const.VALID_POSITIONS):                          
+                                if self.state.turn % 2 == 0:
+                                    #selectedTailP1 = True 
+                                    print("por implementar")   
+                                if self.state.turn % 2 == 1:
+                                    print("por implementar")
+                    if (pos[0] > const.WIDTH-65 and pos[0] < const.WIDTH and pos[1] > 0 and pos[1] < 65):
+                        print("Tablas")
+                        self.state.game_state = "Tablas"
 
-if __name__ == '__main__':
-    main()
+                elif event.type == KEYDOWN:
+                    if event.key == K_ESCAPE:
+                        running = False
+                    elif event.key == K_s:
+                        saved_state = State(p1_tiles, p2_tiles, self.state.p1_n_tiles, self.state.p2_n_tiles, self.state.turn , self.state.game_state)
+                        saved_state.save_state()
+                        print("State saved")
+                    elif event.key == K_r:
+                        bg_img = pygame.image.load(const.BOARD)
+                        bg_img = pygame.transform.scale(bg_img,(const.WIDTH, const.HEIGHT))
+                        map_tiles.clear()
+                        p1_tiles.clear()
+                        p2_tiles.clear()
+                        p1_tiles, p2_tiles, self.state.turn  = saved_state.load_state()
+                        print("State loaded")
+                elif event.type == QUIT:
+                    running = False
+                    print("Bye!")    
+
+            #FICHAS POR COLOCAR
+            if (self.state.p1_n_tiles != 0) or (self.state.p2_n_tiles != 0):
+                for i in available_positions:
+                    coords = unparse_coords(i)
+                    window.blit(available_pos, coords)
+
+            #FICHAS YA COLOCADAS
+            if(selectedTailP1):
+                if(parse_coords(pos) in p1_tiles):
+                    #no_options_position = True
+                    positions_to_move=[]
+                    pcords = parse_coords(pos)
+                    coord = unparse_coords(pcords)                  
+                    for i in const.BOARD_POSITIONS['['+str(pcords[0])+', '+str(pcords[1])+']']:
+                        if i in available_positions:                            
+                            positions_to_move.append(i)
+                            if positions_to_move:
+                                window.blit(selected_pos_green, coord)
+                            else:
+                                window.blit(selected_pos_red, coord) #no funciona
+
+                            coords = unparse_coords(i)
+                            window.blit(available_pos, coords)
+                    
+                    if(parse_coords(pos) in positions_to_move):
+                        new_coord = parse_coords(pos)
+                        p1_tiles.remove(pcords)
+                        p1_tiles.append(new_coord)
+                        available_positions.remove(parse_coords(pos))
+                        available_positions.append(parse_coords(pos))
+                        self.state.turn  *= -1
+                        selectedTailP1 = False
+
+                            
+            #COLOCACIÓN DE FICHAS                
+            for p1_tile in p1_tiles:
+                rect = p1_img.get_rect(center = unparse_coords(p1_tile))
+                map_tiles.append((p1_img, rect))
+            
+            for p2_tile in p2_tiles:
+                rect = p2_img.get_rect(center = unparse_coords(p2_tile))
+                map_tiles.append((p2_img, rect))
+
+            pygame.display.update()            
+        pygame.quit()
+        return self.state.__dict__()

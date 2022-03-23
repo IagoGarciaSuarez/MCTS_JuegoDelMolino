@@ -21,28 +21,41 @@ from tile import Tile
 
 class State:
     '''La clase estado corresponde a la clase tablero.'''
-    def __init__(self, state_id, p1_positions=[], p2_positions=[], p1_n_tiles=9, p2_n_tiles=9, turn=0):
+    def __init__(self, state_id, p1_positions=[], p2_positions=[], p1_n_tiles=9, p2_n_tiles=9, turn=0, game_state=""):
         '''Inicialización de la clase estado correspondiente al tablero.'''
         self.__state_id = state_id
-        self.__p1_positions = p1_positions
-        self.__p2_positions = p2_positions
-        self.__p1_n_tiles = p1_n_tiles
-        self.__p2_n_tiles = p2_n_tiles
-        self.__turn = turn
-    
-    def __repr__(self) -> str:
+        self.p1_positions = p1_positions
+        self.p2_positions = p2_positions
+        self.p1_n_tiles = p1_n_tiles
+        self.p2_n_tiles = p2_n_tiles
+        self.turn = turn
+        self.game_state = game_state
+
+    def __dict__(self):
         state_data = {
             "state_id": self.__state_id,
-            "p1_positions": self.__p1_positions,
-            "p2_positions": self.__p2_positions,
-            "p1_n_tiles": self.__p1_n_tiles,
-            "p2_n_tiles": self.__p2_n_tiles,
-            "turn": self.__turn
+            "p1_positions": self.p1_positions,
+            "p2_positions": self.p2_positions,
+            "p1_n_tiles": self.p1_n_tiles,
+            "p2_n_tiles": self.p2_n_tiles,
+            "turn": self.turn,
+            "game_state": self.game_state
         }
         return state_data
     
+    # def __repr__(self) -> str:
+    #     state_data = {
+    #         "state_id": self.__state_id,
+    #         "p1_positions": self.p1_positions,
+    #         "p2_positions": self.p2_positions,
+    #         "p1_n_tiles": self.p1_n_tiles,
+    #         "p2_n_tiles": self.p2_n_tiles,
+    #         "turn": self.turn
+    #     }
+    #     return state_data
+    
     def __str__(self) -> str:
-        return json.dumps(self.__repr__())
+        return json.dumps(self.__dict__)
     @property
     def get_state_id(self):
         return self.__state_id
@@ -55,40 +68,86 @@ class State:
         print(self)
         #logs.info("Estado actual de la partida guardado correctamente.")
     
-    def load_state(self):
-        '''Carga del último estado guardado a partir de un JSON.'''
-        with open(const.STATES_JSON, 'r') as states_file:
-            state_data = json.load(states_file)
+    def load_state(self, state_data):
+        # '''Carga del último estado guardado a partir de un JSON.'''
+        # with open(const.STATES_JSON, 'r') as states_file:
+        #     state_data = json.load(states_file)
         
         self.__state_id = state_data["state_id"]
-        self.__p1_positions = state_data["p1_positions"]
-        self.__p2_positions = state_data["p2_positions"]
-        self.__p1_n_tiles = state_data["p1_n_tiles"]
-        self.__p2_n_tiles = state_data["p2_n_tiles"]
-        self.__turn = state_data["turn"]
+        self.p1_positions = state_data["p1_positions"]
+        self.p2_positions = state_data["p2_positions"]
+        self.p1_n_tiles = state_data["p1_n_tiles"]
+        self.p2_n_tiles = state_data["p2_n_tiles"]
+        self.turn = state_data["turn"]
 
         #logs.info("Última partida guardada cargada correctamente.")
 
     def get_tile_data(self, position):
         '''Genera una instancia de Tile con los datos de una ficha dada una posición del tablero.'''
-        if position in const.BOARD_POSITIONS and position in self.__p1_positions:
+        if position in const.BOARD_POSITIONS and position in self.p1_positions:
             return Tile(position, 0)
-        elif position in const.BOARD_POSITIONS and position in self.__p2_positions:
+        elif position in const.BOARD_POSITIONS and position in self.p2_positions:
             return Tile(position, 1)
 
-    def validate_movement(self, movement: Movement):
-        '''
-        Verificación del movimiento con forma (pos_inicial, pos_final).
-        Comprueba si existe una ficha en la posición inicial, 
-        si está viva y si la posición objetivo existe y es alcanzable
-        desde la posición inicial.
-        '''
-        tile = self.get_tile_data(movement.initial_pos)
-        if not tile or not tile.alive:
-            return False
-        if str(movement.final_pos) not in const.BOARD_POSITIONS or \
-            movement.final_pos not in const.BOARD_POSITIONS[str(movement.initial_pos)]:
-            return False
-        
+    def validate_movement(self, movement):
+        movement = Movement(**movement)
+        turn = self.turn % 2
+        if turn == 0:
+            my_pos_tiles = self.p1_positions
+            my_n_tiles = self.p1_n_tiles
+        else:
+            my_pos_tiles = self.p2_positions
+            my_n_tiles = self.p2_n_tiles
 
-        
+        if not movement.initial_pos:
+            if (my_n_tiles - len(my_pos_tiles)) <= 0:
+                print("Tiles: ", (my_n_tiles - len(my_pos_tiles)))
+                return False
+        else:
+            tile = self.get_tile_data(movement.initial_pos)
+            if not tile or not tile.alive:
+                print("No tile")
+                return False
+            if movement.final_pos not in const.BOARD_POSITIONS[str(movement.initial_pos)] or \
+                movement.final_pos in self.p1_positions + self.p2_positions:
+                print("No valid final pos")
+                return False
+        if movement.kill_tile and self.is_line(self, movement, my_pos_tiles):
+            tile = self.get_tile_data(movement.kill_tile)
+            if not tile or not tile.alive or tile.player == turn:
+                return False
+        return True
+
+    def is_line(self, movement: Movement, player_positions):
+        positions = [pos for pos in player_positions if pos != movement.initial_pos]
+        line_counter = 1
+        for pos in positions:
+            if pos[0] == movement.final_pos[0]:
+                line_counter += 1
+            if line_counter >= 3:
+                return True
+        line_counter = 1
+        for pos in positions:
+            if pos[1] == movement.final_pos[1]:
+                line_counter += 1
+            if line_counter >= 3:
+                return True
+        return False
+    
+    def make_movement(self, movement):
+        movement = Movement(**dict(movement))
+        turn = self.turn % 2
+        if turn == 0:
+            if movement.initial_pos:
+                self.p1_positions.remove(movement.initial_pos)
+            self.p1_positions.append(movement.final_pos)
+            if movement.kill_tile:
+                self.p2_positions.remove(movement.kill_tile)
+        else:
+            if movement.initial_pos:
+                self.p2_positions.remove(movement.initial_pos)
+            self.p2_positions.append(movement.final_pos)
+            if movement.kill_tile:
+                self.p1_positions.remove(movement.kill_tile)     
+        self.turn += 1 
+        return self.__dict__()

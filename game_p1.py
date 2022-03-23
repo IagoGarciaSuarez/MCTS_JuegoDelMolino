@@ -2,14 +2,14 @@
 # -*- coding: utf-8 -*-
 
 import cmd
-import string
-from tokenize import String
-from server import Server
+from server.server_manager import ServerManager
 import utils
 import uuid
 from prettytable import PrettyTable
 from getpass import getpass
 from db_manager import UserDB
+from graphics import Graphics
+from state import State
 
 class main(cmd.Cmd):
     prompt = '\n>'
@@ -18,7 +18,7 @@ class main(cmd.Cmd):
     password_hash = None
     last_gamelist = None
     users_db = UserDB()
-    server = Server()
+    server = ServerManager()
 
     def do_login(self, initial=None):
         'login - Log into the system with an existing account.\n'
@@ -117,8 +117,12 @@ class main(cmd.Cmd):
             print('Game creation cancelled.\n')
             return
         print('\nCreating new game, please wait...\n')
-        print(f'New game created with ID: {self.server.new_game(self.username, game_name, game_password)}\n')
+        game_uid = self.server.new_game(self.username, game_name, game_password)
+        print(f'New game created with ID: {game_uid}\n')
+        game = Graphics(State(**self.server.get_game_data(game_uid)))
+        result = game.game()
         print('Game terminated.\n')
+        print(result)
     
     def do_listgames(self, initial=None):
         'listgames - List all the available games at the moment with their uid to join.\n'
