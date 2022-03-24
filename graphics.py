@@ -1,5 +1,6 @@
 from typing import List
-from utils import parse_coords, scale_img, unparse_coords
+from movement import Movement
+from utils import parse_coords, scale_img, unparse_coords, is_line
 from state import State
 import const
 import pygame
@@ -26,8 +27,10 @@ class Graphics:
         font = pygame.font.Font(None, 60)
 
         #IMAGENES
-        bg_img = pygame.image.load(const.BOARD)
-        bg_img = pygame.transform.scale(bg_img,(const.WIDTH, const.HEIGHT))
+        tablero_img = pygame.image.load(const.BOARD)
+        tablero_img = pygame.transform.scale(tablero_img,(const.WIDTH, const.HEIGHT))
+        tablas_img = pygame.image.load(const.TABLAS)
+        tablas_img = pygame.transform.scale(tablas_img,(const.WIDTH, const.HEIGHT))
         p1_img_scoreboard = pygame.image.load(const.P1_TILE_IMG)
         p2_img_scoreboard = pygame.image.load(const.P2_TILE_IMG)
         p1_img  = scale_img(const.P1_TILE_IMG, (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
@@ -45,17 +48,23 @@ class Graphics:
         positions_to_move=[]
         available_positions = const.VALID_POSITIONS  #POSICIONES SIN OCUPAR EN EL TABLERO
         if(len(p1_tiles) > 0 or len(p2_tiles) > 0):
-                for i in positions:
-                    available_positions.remove(i)
+            for i in positions:
+                available_positions.remove(i)
         running = True
         selectedTailP1 = False
         selectedTailP11 = False
         selectedTailP2 = False
         selectedTailP22 = False
+        tablasP1 = False
+        tablasP2 = False
+        turnoTablasP1 = 1000
+        turnoTablasP2 = 1000
+        lineP1 = False
+        lineP2 = False
 
         while running:
             #TABLERO
-            window.blit(bg_img, (0,0))
+            window.blit(tablero_img, (0,0))
             #FICHAS
             window.blits(map_tiles)
             #MARCADORES
@@ -82,7 +91,6 @@ class Graphics:
                             if(parse_coords(pos) in const.VALID_POSITIONS and parse_coords(pos) not in positions):
                                 pcords = parse_coords(pos)
                                 positions.append(pcords)
-                                print(positions)
                                 #P1
                                 if self.state.turn % 2 == 0:
                                     p1_tiles.append(pcords)
@@ -94,8 +102,7 @@ class Graphics:
                                     available_positions.remove(pcords)
                                     self.state.p2_n_tiles -= 1
                                 self.state.turn  += 1
-                        else:
-                            
+                        else:                            
                             #P1
                             if(parse_coords(pos) in p1_tiles and self.state.turn % 2 == 0): 
                                 positions_to_move = []
@@ -144,10 +151,25 @@ class Graphics:
                                 selectedTailP2 = False
                                 selectedTailP22 = False
                                 self.state.turn  += 1
+                        if(lineP1):
+                            if(parse_coords(pos) in p2_tiles):
+                                print("LineP1")
+                        if(lineP2):
+                            print("LineP2")
 
                     if (pos[0] > const.WIDTH-65 and pos[0] < const.WIDTH and pos[1] > 0 and pos[1] < 65):
-                        print("Tablas")
-                        self.state.game_state = "Tablas"
+                        print("tablas")
+                        # #P1
+                        # if self.state.turn % 2 == 0:
+                        #     print("Jugador 1 solicita tablas")
+                        #     tablasP1 = True 
+                        #     turnoTablasP1 = self.state.turn                           
+                        # #P2
+                        # if self.state.turn % 2 != 0:
+                        #     print("Jugador 2 solicita tablas")
+                        #     tablasP2 = True
+                        #     turnoTablasP2 = self.state.turn  
+                        # self.state.turn  += 1                       
 
                 elif event.type == KEYDOWN:
                     if event.key == K_ESCAPE:
@@ -157,8 +179,8 @@ class Graphics:
                         saved_state.save_state()
                         print("State saved")
                     elif event.key == K_r:
-                        bg_img = pygame.image.load(const.BOARD)
-                        bg_img = pygame.transform.scale(bg_img,(const.WIDTH, const.HEIGHT))
+                        tablero_img = pygame.image.load(const.BOARD)
+                        tablero_img = pygame.transform.scale(tablero_img,(const.WIDTH, const.HEIGHT))
                         map_tiles.clear()
                         p1_tiles.clear()
                         p2_tiles.clear()
@@ -193,7 +215,19 @@ class Graphics:
                 else:
                     ncord = selected_pos_red.get_rect(center = coord)
                     window.blit(selected_pos_red, ncord)
-                
+
+            #HACER LINEA            
+            lineP1, lines = is_line(p1_tiles)            
+            if(lineP1):
+                for i in lines:
+                    ncord = selected_pos_green.get_rect(center = unparse_coords(i))
+                    window.blit(selected_pos_green, ncord)
+            lineP2, lines = is_line(p2_tiles)
+            if(lineP2):
+                for i in lines:
+                    ncord = selected_pos_green.get_rect(center = unparse_coords(i))
+                    window.blit(selected_pos_green, ncord)              
+                   
             #COLOCACIÓN DE FICHAS P1 Y P2
             for p1_tile in p1_tiles:
                 rect = p1_img.get_rect(center = unparse_coords(p1_tile))
@@ -203,13 +237,26 @@ class Graphics:
                 rect = p2_img.get_rect(center = unparse_coords(p2_tile))
                 map_tiles.append((p2_img, rect))
 
-            pygame.display.update()            
+            # #PANTALLAS
+            # if(tablasP1 and tablasP2):
+            #     if(abs(turnoTablasP1-turnoTablasP2) == 1):
+            #         self.state.game_state = "Tablas"
+            #         window.blit(tablas_img, (0,0))
+            #         map_tiles.clear()
+            #         p1_tiles.clear()
+            #         p2_tiles.clear()
+            #     else:
+            #         tablasP1 = False
+            #         tablasP2 = False
+            #         turnoTablasP1 = 1000
+            #         turnoTablasP2 = 1000
+
+            pygame.display.update()
         pygame.quit()
 
-
-
-
 state = State(1,[[2, 4], [0, 0], [6, 3], [4, 3], [3, 0], [5, 5], [4, 2], [6, 6], [1, 5]],[[2, 3], [6, 0], [3, 6], [3, 1], [0, 3], [0, 6], [5, 1], [1, 1], [1, 3]],0,0,0,"Prueba")
-state1 = State(1,[],[],9,9,0,"Prueba")
-graphics = Graphics(state)
+state1 = State(1,[[0,0],[1,0],[3,0]],[],9,9,0,"Prueba")
+graphics = Graphics()
 graphics.game()
+
+

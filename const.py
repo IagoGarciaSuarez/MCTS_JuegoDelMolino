@@ -1,6 +1,7 @@
 WIDTH = 700
 HEIGHT = 600
 BOARD = 'assets/image/BOARD.png'
+TABLAS = 'assets/image/TABLAS.png'
 MUSIC = 'assets/audio/bg_music.mp3'
 P1_TILE_IMG = 'assets/image/P1.png'
 P2_TILE_IMG = 'assets/image/P2.png'
