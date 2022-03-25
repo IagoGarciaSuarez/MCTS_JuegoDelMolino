@@ -2,6 +2,8 @@ WIDTH = 700
 HEIGHT = 600
 BOARD = 'assets/image/BOARD.png'
 TABLAS = 'assets/image/TABLAS.png'
+P1_WINS = 'assets/image/JUGADOR1_GANA.png'
+P2_WINS = 'assets/image/JUGADOR2_GANA.png'
 MUSIC = 'assets/audio/bg_music.mp3'
 P1_TILE_IMG = 'assets/image/P1.png'
 P2_TILE_IMG = 'assets/image/P2.png'
@@ -41,7 +43,8 @@ BOARD_POSITIONS = {
     "[3, 6]": [[3, 5], [0, 6], [6, 6]],
     "[6, 6]": [[6, 3], [3, 6]]
 }
-VALID_POSITIONS = [[0, 0],[3, 0],[6, 0],
+VALID_POSITIONS = [
+[0, 0],[3, 0],[6, 0],
 [1, 1],[3, 1],[5, 1],
 [2, 2],[3, 2],[4, 2],
 [0, 3],[1, 3],[2, 3],[4, 3],[5, 3],[6, 3],
