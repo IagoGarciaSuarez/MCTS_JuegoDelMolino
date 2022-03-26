@@ -59,15 +59,16 @@ class Graphics:
         selectedTailP11 = False
         selectedTailP2 = False
         selectedTailP22 = False
+        tablas = []
+        img_tablas = False
         tablasP1 = False
         tablasP2 = False
-        turnoTablasP1 = 1000
-        turnoTablasP2 = 1000
+        turnoTablasP1 = 1000#
+        turnoTablasP2 = 1000 #
         line = False #SI ES TRUE HAY UN 3 EN RAYA
         lineP1 = False #EL 3 EN RAYA ES DEL JUGADOR 1
         lineP2 = False #EL 3 EN RAYA ES DEL JUGADOR 2
         linesInTableP1 = []
-        positions_to_killP1 = []
         linesInTableP2 = []
 
         while running:
@@ -193,20 +194,8 @@ class Graphics:
                                     lineP2 = False
                                     line = False
 
-                    if (pos[0] > const.WIDTH-65 and pos[0] < const.WIDTH and pos[1] > 0 and pos[1] < 65):
-                        print("tablas")
-                        
-                        # #P1
-                        # if self.state.turn % 2 == 0:
-                        #     print("Jugador 1 solicita tablas")
-                        #     tablasP1 = True 
-                        #     turnoTablasP1 = self.state.turn                           
-                        # #P2
-                        # if self.state.turn % 2 != 0:
-                        #     print("Jugador 2 solicita tablas")
-                        #     tablasP2 = True
-                        #     turnoTablasP2 = self.state.turn  
-                        # self.state.turn  += 1                       
+                    if (pos[0] > const.WIDTH-65 and pos[0] < const.WIDTH and pos[1] > 0 and pos[1] < 65):                        
+                        tablas.append(self.state.turn)                                            
 
                 elif event.type == KEYDOWN:
                     if event.key == K_ESCAPE:
@@ -300,36 +289,32 @@ class Graphics:
                 rect = p2_img.get_rect(center = unparse_coords(p2_tile))
                 map_tiles.append((p2_img, rect))
 
-            # #PANTALLAS
-            # if(tablasP1 and tablasP2):
-            #     if(abs(turnoTablasP1-turnoTablasP2) == 1):
-            #         self.state.game_state = "Tablas"
-            #         window.blit(tablas_img, (0,0))
-            #         map_tiles.clear()
-            #         p1_tiles.clear()
-            #         p2_tiles.clear()
-            #     else:
-            #         tablasP1 = False
-            #         tablasP2 = False
-            #         turnoTablasP1 = 1000
-            #         turnoTablasP2 = 1000
-            # if (self.state.game_state == "P1 WINS"):
-            #     window.blit(p1_wins_img, (0,0))
-            #     map_tiles.clear()
-            #     p1_tiles.clear()
-            #     p2_tiles.clear()
-            # if (self.state.game_state == "P2 WINS"):
-            #     window.blit(p2_wins_img, (0,0))
-            #     map_tiles.clear()
-            #     p1_tiles.clear()
-            #     p2_tiles.clear()
+            #PANTALLAS
+            # if(len(tablas)==1 and self.state.turn % 2 == 0):
+            #     window.blit(p2_img_scoreboard, (472,552))
+            # if(len(tablas)==1 and self.state.turn % 2 != 0):
+            #     window.blit(p1_img_scoreboard, (472,552))
+            if(len(tablas)==2):
+                if(tablas[0]==tablas[1]):
+                    window.blit(tablas_img, (0,0))
+                else:
+                    tablas.clear()
+
+            self.state.endgame()
+            if (self.state.game_state == "P1 WINS"):
+                window.blit(p1_wins_img, (0,0))
+                map_tiles.clear()
+                p1_tiles.clear()
+                p2_tiles.clear()
+            if (self.state.game_state == "P2 WINS"):
+                window.blit(p2_wins_img, (0,0))
+                map_tiles.clear()
+                p1_tiles.clear()
+                p2_tiles.clear()
             pygame.display.update()
         pygame.quit()
-        print(p1_tiles)
-        print(p2_tiles)
 
-state = State(1,[[2, 4], [0, 0], [6, 3], [4, 3], [3, 0], [5, 5], [4, 2], [6, 6], [1, 5]],[[2, 3], [6, 0], [3, 6], [3, 1], [0, 3], [0, 6], [5, 1], [1, 1], [1, 3]],0,0,0,"Prueba")
-state1 = State(1,[[0,0],[1,0],[3,0]],[],9,2,0,"Prueba")
+state = State(1,[[2, 4], [0, 0], [6, 3], [4, 3], [3, 0], [5, 5], [4, 2], [6, 6], [1, 5]],[[2, 3], [6, 0], [3, 6], [3, 1], [0, 3], [0, 6], [5, 1], [1, 1], [1, 3]],0,0,0,"")
 graphics = Graphics()
 graphics.game()
 

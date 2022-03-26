@@ -151,3 +151,9 @@ class State:
                 self.p1_positions.remove(movement.kill_tile)     
         self.turn += 1 
         return self.__dict__()
+    
+    def endgame(self):
+        if (const.MAX_FICHAS-self.p1_n_tiles-len(self.p1_positions)) > 6:
+            self.game_state = "P2 WINS"
+        if (const.MAX_FICHAS-self.p2_n_tiles-len(self.p2_positions)) > 6:
+            self.game_state = "P1 WINS"
