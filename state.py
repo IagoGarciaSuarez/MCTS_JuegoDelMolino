@@ -119,21 +119,21 @@ class State:
     def is_line(self, movement: Movement, player_positions):
         positions = [pos for pos in player_positions if pos != movement.initial_pos]
         line_counter = [movement.final_pos]
-        for pos in positions:
-            for line_pos in line_counter:
-                if pos != line_pos and pos[0] == line_counter[0] and pos in const.BOARD_POSITIONS[str(line_pos)]:
-                    line_counter.append(pos)
-                    if len(line_counter) == 3:
-                        return (True, line_counter)
-            for line_pos in line_counter:
-                if pos != line_pos and pos[1] == line_counter[1] and pos in const.BOARD_POSITIONS[str(line_pos)]:
-                    line_counter.append(pos)
-                    if len(line_counter) == 3:
-                        return (True, line_counter)
+        if positions:
+            for pos in positions:
+                for line_pos in line_counter:
+                    if pos != line_pos and pos[0] == line_pos[0] and pos in const.BOARD_POSITIONS[str(line_pos)]:
+                        line_counter.append(pos)
+                        if len(line_counter) == 3:
+                            return (True, line_counter)
+                for line_pos in line_counter:
+                    if pos != line_pos and pos[1] == line_pos[1] and pos in const.BOARD_POSITIONS[str(line_pos)]:
+                        line_counter.append(pos)
+                        if len(line_counter) == 3:
+                            return (True, line_counter)
         return (False, [])
     
     def make_movement(self, movement: Movement):
-        movement = Movement(**dict(movement))
         if not self.validate_movement(movement):
             return self.__dict__()
         turn = self.turn % 2
