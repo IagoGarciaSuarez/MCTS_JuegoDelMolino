@@ -89,8 +89,7 @@ class State:
         elif position in const.BOARD_POSITIONS and position in self.p2_positions:
             return Tile(position, 1)
 
-    def validate_movement(self, movement):
-        movement = Movement(**movement)
+    def validate_movement(self, movement: Movement):
         turn = self.turn % 2
         if turn == 0:
             my_pos_tiles = self.p1_positions
@@ -100,8 +99,7 @@ class State:
             my_n_tiles = self.p2_n_tiles
 
         if not movement.initial_pos:
-            if (my_n_tiles - len(my_pos_tiles)) <= 0:
-                print("Tiles: ", (my_n_tiles - len(my_pos_tiles)))
+            if my_n_tiles <= 0 or movement.final_pos in (self.p1_positions + self.p2_positions):
                 return False
         else:
             tile = self.get_tile_data(movement.initial_pos)
@@ -109,7 +107,7 @@ class State:
                 print("No tile")
                 return False
             if movement.final_pos not in const.BOARD_POSITIONS[str(movement.initial_pos)] or \
-                movement.final_pos in self.p1_positions + self.p2_positions:
+                movement.final_pos in (self.p1_positions + self.p2_positions):
                 print("No valid final pos")
                 return False
         if movement.kill_tile and self.is_line(self, movement, my_pos_tiles):
@@ -120,22 +118,24 @@ class State:
 
     def is_line(self, movement: Movement, player_positions):
         positions = [pos for pos in player_positions if pos != movement.initial_pos]
-        line_counter = 1
+        line_counter = [movement.final_pos]
         for pos in positions:
-            if pos[0] == movement.final_pos[0]:
-                line_counter += 1
-            if line_counter >= 3:
-                return True
-        line_counter = 1
-        for pos in positions:
-            if pos[1] == movement.final_pos[1]:
-                line_counter += 1
-            if line_counter >= 3:
-                return True
-        return False
+            for line_pos in line_counter:
+                if pos != line_pos and pos[0] == line_counter[0] and pos in const.BOARD_POSITIONS[str(line_pos)]:
+                    line_counter.append(pos)
+                    if len(line_counter) == 3:
+                        return (True, line_counter)
+            for line_pos in line_counter:
+                if pos != line_pos and pos[1] == line_counter[1] and pos in const.BOARD_POSITIONS[str(line_pos)]:
+                    line_counter.append(pos)
+                    if len(line_counter) == 3:
+                        return (True, line_counter)
+        return (False, [])
     
-    def make_movement(self, movement):
+    def make_movement(self, movement: Movement):
         movement = Movement(**dict(movement))
+        if not self.validate_movement(movement):
+            return self.__dict__()
         turn = self.turn % 2
         if turn == 0:
             if movement.initial_pos:
