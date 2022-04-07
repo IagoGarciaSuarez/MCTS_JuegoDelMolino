@@ -117,20 +117,26 @@ class State:
         return True
 
     def is_line(self, movement: Movement, player_positions):
+        print('COMPRUEBA SI ES LÍNEA ', movement.final_pos, player_positions)
         positions = [pos for pos in player_positions if pos != movement.initial_pos]
+        print(positions)
         line_counter = [movement.final_pos]
-        if positions:
-            for pos in positions:
-                for line_pos in line_counter:
-                    if pos != line_pos and pos[0] == line_pos[0] and pos in const.BOARD_POSITIONS[str(line_pos)]:
-                        line_counter.append(pos)
-                        if len(line_counter) == 3:
-                            return (True, line_counter)
-                for line_pos in line_counter:
-                    if pos != line_pos and pos[1] == line_pos[1] and pos in const.BOARD_POSITIONS[str(line_pos)]:
-                        line_counter.append(pos)
-                        if len(line_counter) == 3:
-                            return (True, line_counter)
+        if not positions:
+            return (False, [])
+        for pos in positions:
+            for line_pos in line_counter:
+                if pos != line_pos and pos[0] == line_pos[0] and pos in const.BOARD_POSITIONS[str(line_pos)]:
+                    line_counter.append(pos)
+                    if len(line_counter) == 3:
+                        return (True, line_counter)
+        line_counter = [movement.final_pos]
+        for pos in positions:
+            for line_pos in line_counter:
+                if pos != line_pos and pos[1] == line_pos[1] and pos in const.BOARD_POSITIONS[str(line_pos)]:
+                    line_counter.append(pos)
+                    if len(line_counter) == 3:
+                        return (True, line_counter)
+        print('LINE COUNTER: ', line_counter)
         return (False, [])
     
     def make_movement(self, movement: Movement):

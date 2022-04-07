@@ -1,6 +1,6 @@
 WIDTH = 700
 HEIGHT = 600
-BOARD = 'assets/image/BOARD.png'
+BOARD = 'assets/image/FULL_BOARD.png'
 TABLAS = 'assets/image/TABLAS.png'
 P1_WINS = 'assets/image/JUGADOR1_GANA.png'
 P2_WINS = 'assets/image/JUGADOR2_GANA.png'

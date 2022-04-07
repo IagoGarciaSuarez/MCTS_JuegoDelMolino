@@ -39,7 +39,7 @@ class Graphics:
         p2_img = scale_img(const.P2_TILE_IMG, (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
         available_pos_img = pygame.image.load(const.AVAILABLE_POSITION)
         selected_pos_green_img = scale_img(const.SELECTED_POSITION_GREEN, (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
-        selected_pos_red_img = scale_img(const.SELECTED_POSITION_RED, (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
+        red_pos_img = scale_img(const.SELECTED_POSITION_RED, (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
 
         #VARIABLES
         
@@ -53,6 +53,7 @@ class Graphics:
         green_positions = []
         red_positions = []
         available_positions = []
+        selectable_positions = []
 
         final_pos = None
 
@@ -95,12 +96,15 @@ class Graphics:
                     if not (pos[0] < 111 or pos[1] < 61 or pos[0] > const.HEIGHT - 15 or pos[1] > const.WIDTH - 164): # DENTRO DEL TABLERO
                         pcoords = parse_coords(pos)
                         print(pcoords, (self.state.turn % 2) + 1)
+                        print('FICHAS DE P1: ', self.state.p1_positions)
+                        print('FICHAS DE P2: ', self.state.p2_positions)
                         if self.state.turn % 2 == 0:
                             if self.state.p1_n_tiles > 0: # SI TURNO P1 Y QUEDAN FICHAS POR PONER
                                 available_positions = [eval(pos) for pos in const.BOARD_POSITIONS if eval(pos) not in (p1_tiles + p2_tiles)]
                                 if line:                            
                                     if pcoords in self.state.p2_positions:
                                         movement = Movement([], final_pos, pcoords)
+                                        selectable_positions += self.state.p2_positions
                                         self.state.make_movement(movement)
                                         available_positions.clear()
                                         red_positions.clear()
@@ -108,9 +112,12 @@ class Graphics:
                                         selected_tile_p1 = None
                                         selected_tile_p2 = None
                                 else:
-                                    if pcoords in available_positions:
+                                    if pcoords in available_positions:  
                                         movement = Movement([], pcoords)
-                                        is_line = self.state.is_line(movement, [p_pos for p_pos in self.state.p1_positions if p_pos != pcoords])
+                                        player_positions = [pos for pos in self.state.p1_positions]
+                                        player_positions.append(pcoords)
+                                        is_line = self.state.is_line(movement, player_positions)
+                                        player_positions.clear()
                                         if is_line[0]:
                                             final_pos = pcoords
                                             line = True
@@ -122,6 +129,7 @@ class Graphics:
                                             self.state.make_movement(movement)
                                             available_positions.clear()
                                             red_positions.clear()
+                                            selectable_positions.clear()
                                             green_positions.clear()
                                             selected_tile_p1 = None
                                             selected_tile_p2 = None
@@ -136,10 +144,12 @@ class Graphics:
                                         line = True
                                         available_positions.clear()
                                         red_positions.clear()
+                                        selectable_positions.clear()
                                     else:
                                         self.state.make_movement(movement)
                                         available_positions.clear()
                                         red_positions.clear()
+                                        selectable_positions.clear()
                                         green_positions.clear()
                                         selected_tile_p1 = None
                                         selected_tile_p2 = None
@@ -158,7 +168,10 @@ class Graphics:
                                 else:
                                     if pcoords in available_positions:
                                         movement = Movement([], pcoords)
-                                        is_line = self.state.is_line(movement, [p_pos for p_pos in self.state.p2_positions if p_pos != pcoords])
+                                        player_positions = [pos for pos in self.state.p2_positions]
+                                        player_positions.append(pcoords)
+                                        is_line = self.state.is_line(movement, player_positions)
+                                        player_positions.clear()
                                         if is_line[0]:
                                             final_pos = pcoords
                                             line = True
@@ -354,7 +367,9 @@ class Graphics:
 
 
             # SI ES LINEA IMPLEMENTAR CIRCULOS ROJOS EN P2 POSITIONS
-
+            for red_pos in selectable_positions:
+                rect = red_pos_img.get_rect(center = unparse_coords(red_pos))
+                red_positions.append((red_pos_img, rect))
 
             # #HACER LINEA                        
             # if(line_p1):
