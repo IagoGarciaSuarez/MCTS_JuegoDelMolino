@@ -102,13 +102,10 @@ class Graphics:
                                 if line:                            
                                     if pcoords in self.state.p2_positions:
                                         movement = Movement([], final_pos, pcoords)
-                                        selectable_positions += self.state.p2_positions
                                         self.state.make_movement(movement)
-                                        available_positions.clear()
+                                        line = False
+                                        selectable_positions.clear()
                                         red_positions.clear()
-                                        green_positions.clear()
-                                        selected_tile_p1 = None
-                                        selected_tile_p2 = None
                                 else:
                                     if pcoords in available_positions:  
                                         movement = Movement([], pcoords)
@@ -119,8 +116,7 @@ class Graphics:
                                         if is_line[0]:
                                             final_pos = pcoords
                                             line = True
-                                            print('LINEA P1')
-                                            print(is_line)
+                                            selectable_positions += self.state.p2_positions
                                             available_positions.clear()
                                             red_positions.clear()
                                         else:
@@ -332,6 +328,7 @@ class Graphics:
 
             #CIRCULOS VERDES EN ACCIONES DISPONIBLES
             if not line:
+                green_positions.clear()
                 if self.state.turn % 2 == 0:
                     if self.state.p1_n_tiles != 0 or (selected_tile_p1 and len(self.state.p1_positions) == 3):
                         for av_pos in available_positions:
@@ -363,11 +360,10 @@ class Graphics:
                             rect = available_pos_img.get_rect(center = unparse_coords(av_pos))
                             green_positions.append((available_pos_img, rect))
 
-
-            # SI ES LINEA IMPLEMENTAR CIRCULOS ROJOS EN P2 POSITIONS
-            for red_pos in selectable_positions:
-                rect = red_pos_img.get_rect(center = unparse_coords(red_pos))
-                red_positions.append((red_pos_img, rect))
+            else:
+                for red_pos in selectable_positions:
+                    rect = red_pos_img.get_rect(center = unparse_coords(red_pos))
+                    red_positions.append((red_pos_img, rect))
 
             # #HACER LINEA                        
             # if(line_p1):
@@ -406,11 +402,12 @@ class Graphics:
             #             window.blit(selected_pos_red, ncord)                            
                    
             #COLOCACIÓN DE FICHAS P1 Y P2
-            for p1_tile in p1_tiles:
+            map_tiles.clear()
+            for p1_tile in self.state.p1_positions:
                 rect = p1_img.get_rect(center = unparse_coords(p1_tile))
                 map_tiles.append((p1_img, rect))
             
-            for p2_tile in p2_tiles:
+            for p2_tile in self.state.p2_positions:
                 rect = p2_img.get_rect(center = unparse_coords(p2_tile))
                 map_tiles.append((p2_img, rect))
 

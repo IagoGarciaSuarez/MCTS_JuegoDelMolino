@@ -84,9 +84,9 @@ class State:
 
     def get_tile_data(self, position):
         '''Genera una instancia de Tile con los datos de una ficha dada una posición del tablero.'''
-        if position in const.BOARD_POSITIONS and position in self.p1_positions:
+        if str(position) in const.BOARD_POSITIONS and position in self.p1_positions:
             return Tile(position, 0)
-        elif position in const.BOARD_POSITIONS and position in self.p2_positions:
+        elif str(position) in const.BOARD_POSITIONS and position in self.p2_positions:
             return Tile(position, 1)
 
     def validate_movement(self, movement: Movement):
@@ -110,7 +110,7 @@ class State:
                 movement.final_pos in (self.p1_positions + self.p2_positions):
                 print("No valid final pos")
                 return False
-        if movement.kill_tile and self.is_line(self, movement, my_pos_tiles):
+        if movement.kill_tile and self.is_line(movement, my_pos_tiles)[0]:
             tile = self.get_tile_data(movement.kill_tile)
             if not tile or not tile.alive or tile.player == turn:
                 return False
