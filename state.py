@@ -21,7 +21,7 @@ from tile import Tile
 
 class State:
     '''La clase estado corresponde a la clase tablero.'''
-    def __init__(self, state_id, p1_positions=[], p2_positions=[], p1_n_tiles=9, p2_n_tiles=9, turn=0, game_state=""):
+    def __init__(self, state_id, p1_positions=[], p2_positions=[], p1_n_tiles=5, p2_n_tiles=5, turn=0, game_state=""):
         '''Inicialización de la clase estado correspondiente al tablero.'''
         self.__state_id = state_id
         self.p1_positions = p1_positions
@@ -106,7 +106,7 @@ class State:
             if not tile or not tile.alive:
                 print("No tile")
                 return False
-            if movement.final_pos not in const.BOARD_POSITIONS[str(movement.initial_pos)] or \
+            if (movement.final_pos not in const.BOARD_POSITIONS[str(movement.initial_pos)] and my_n_tiles > 3) or \
                 movement.final_pos in (self.p1_positions + self.p2_positions):
                 print("No valid final pos")
                 return False
@@ -157,12 +157,16 @@ class State:
         if turn == 0:
             if movement.initial_pos:
                 self.p1_positions.remove(movement.initial_pos)
+            else:
+                self.p1_n_tiles -= 1
             self.p1_positions.append(movement.final_pos)
             if movement.kill_tile:
                 self.p2_positions.remove(movement.kill_tile)
         else:
             if movement.initial_pos:
                 self.p2_positions.remove(movement.initial_pos)
+            else:
+                self.p2_n_tiles -= 1
             self.p2_positions.append(movement.final_pos)
             if movement.kill_tile:
                 self.p1_positions.remove(movement.kill_tile)     
