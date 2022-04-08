@@ -150,37 +150,34 @@ class Graphics:
                         else:
                             if self.state.p2_n_tiles > 0: # SI TURNO P2 Y QUEDAN FICHAS POR PONER
                                 available_positions = [eval(pos) for pos in const.BOARD_POSITIONS if eval(pos) not in (p1_tiles + p2_tiles)]
-                                if line:
-                                    if pos in self.state.p1_positions:
+                                if line:                            
+                                    if pcoords in self.state.p1_positions:
                                         movement = Movement([], final_pos, pcoords)
                                         self.state.make_movement(movement)
-                                        available_positions.clear()
+                                        line = False
+                                        selectable_positions.clear()
                                         red_positions.clear()
-                                        green_positions.clear()
-                                        selected_tile_p1 = None
-                                        selected_tile_p2 = None
                                 else:
-                                    if pcoords in available_positions:
+                                    if pcoords in available_positions:  
                                         movement = Movement([], pcoords)
                                         player_positions = [pos for pos in self.state.p2_positions]
-                                        player_positions.append(pcoords)
                                         is_line = self.state.is_line(movement, player_positions)
                                         player_positions.clear()
                                         if is_line[0]:
                                             final_pos = pcoords
                                             line = True
-                                            print('LINEA P2')
-                                            print(is_line[1])
+                                            selectable_positions += self.state.p1_positions
                                             available_positions.clear()
                                             red_positions.clear()
                                         else:
                                             self.state.make_movement(movement)
                                             available_positions.clear()
                                             red_positions.clear()
+                                            selectable_positions.clear()
                                             green_positions.clear()
                                             selected_tile_p1 = None
                                             selected_tile_p2 = None
-                            else: # SI TURNO P1 Y NO QUEDAN FICHAS POR PONER
+                            else: # SI TURNO P2 Y NO QUEDAN FICHAS POR PONER
                                 if pcoords in self.state.p2_positions and not selected_tile_p2:
                                     selected_tile_p2 = pcoords
                                 if pcoords in available_positions:
@@ -191,13 +188,16 @@ class Graphics:
                                         line = True
                                         available_positions.clear()
                                         red_positions.clear()
+                                        selectable_positions.clear()
                                     else:
                                         self.state.make_movement(movement)
                                         available_positions.clear()
                                         red_positions.clear()
+                                        selectable_positions.clear()
                                         green_positions.clear()
                                         selected_tile_p1 = None
                                         selected_tile_p2 = None
+
                     #     if(line == False):
                     #         if (self.state.p1_n_tiles != 0) or (self.state.p2_n_tiles != 0):
                     #             if(parse_coords(pos) in available_positions):
