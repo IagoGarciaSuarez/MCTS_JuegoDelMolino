@@ -117,26 +117,37 @@ class State:
         return True
 
     def is_line(self, movement: Movement, player_positions):
-        print('COMPRUEBA SI ES LÍNEA ', movement.final_pos, player_positions)
-        positions = [pos for pos in player_positions if pos != movement.initial_pos]
-        print(positions)
         line_counter = [movement.final_pos]
-        if not positions:
+        print('COMPRUEBA LINEA', player_positions, movement.final_pos)
+        if len(player_positions) <= 1:
             return (False, [])
-        for pos in positions:
-            for line_pos in line_counter:
-                if pos != line_pos and pos[0] == line_pos[0] and pos in const.BOARD_POSITIONS[str(line_pos)]:
-                    line_counter.append(pos)
+        for line_pos in line_counter:
+            for board_pos in const.BOARD_POSITIONS[str(line_pos)]:
+                if board_pos[0] == line_pos[0] and board_pos in player_positions:
+                    line_counter.append(board_pos)
                     if len(line_counter) == 3:
+                        print('LINE')
                         return (True, line_counter)
+                    for b_pos in const.BOARD_POSITIONS[str(board_pos)]:
+                        if b_pos[0] == line_pos[0] and b_pos in player_positions:
+                            line_counter.append(board_pos)
+                            if len(line_counter) == 3:
+                                print('LINE')
+                                return (True, line_counter)
         line_counter = [movement.final_pos]
-        for pos in positions:
-            for line_pos in line_counter:
-                if pos != line_pos and pos[1] == line_pos[1] and pos in const.BOARD_POSITIONS[str(line_pos)]:
-                    line_counter.append(pos)
+        for line_pos in line_counter:
+            for board_pos in const.BOARD_POSITIONS[str(line_pos)]:
+                if board_pos[1] == line_pos[1] and board_pos in player_positions:
+                    line_counter.append(board_pos)
                     if len(line_counter) == 3:
+                        print('LINE')
                         return (True, line_counter)
-        print('LINE COUNTER: ', line_counter)
+                    for b_pos in const.BOARD_POSITIONS[str(board_pos)]:
+                        if b_pos[1] == line_pos[1] and b_pos in player_positions:
+                            line_counter.append(board_pos)
+                            if len(line_counter) == 3:
+                                print('LINE')
+                                return (True, line_counter)
         return (False, [])
     
     def make_movement(self, movement: Movement):

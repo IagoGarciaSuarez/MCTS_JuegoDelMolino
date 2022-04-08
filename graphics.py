@@ -96,8 +96,6 @@ class Graphics:
                     if not (pos[0] < 111 or pos[1] < 61 or pos[0] > const.HEIGHT - 15 or pos[1] > const.WIDTH - 164): # DENTRO DEL TABLERO
                         pcoords = parse_coords(pos)
                         print(pcoords, (self.state.turn % 2) + 1)
-                        print('FICHAS DE P1: ', self.state.p1_positions)
-                        print('FICHAS DE P2: ', self.state.p2_positions)
                         if self.state.turn % 2 == 0:
                             if self.state.p1_n_tiles > 0: # SI TURNO P1 Y QUEDAN FICHAS POR PONER
                                 available_positions = [eval(pos) for pos in const.BOARD_POSITIONS if eval(pos) not in (p1_tiles + p2_tiles)]
@@ -115,7 +113,7 @@ class Graphics:
                                     if pcoords in available_positions:  
                                         movement = Movement([], pcoords)
                                         player_positions = [pos for pos in self.state.p1_positions]
-                                        player_positions.append(pcoords)
+                                        print('PLAYER POSITIONS', player_positions)
                                         is_line = self.state.is_line(movement, player_positions)
                                         player_positions.clear()
                                         if is_line[0]:
