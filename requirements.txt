@@ -1,3 +1,4 @@
 pygame
 prettytable
 fastapi[all]
+numpy

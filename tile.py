@@ -7,6 +7,5 @@ class Tile:
         self.position = position
         self.player = player
         self.alive = True
-        # self.succesor_list = Successor.get_successors(State, self.Tile)
 
 

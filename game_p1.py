@@ -101,8 +101,31 @@ class main(cmd.Cmd):
         self.do_logout()
         print('User removed successfully.\n')
 
-    def do_gamecreate(self, initial=None):
-        'gamecreate - Ask the server to create a new game.\n'
+    def do_pvpcreategame(self, initial=None):
+        'pvpcreategame - Ask the server to create a new PvP game.\n'
+        if not self.user_uid:
+            print('No user is logged in currently.\n')
+            return
+        try:
+            game_name = input('Game name: ')
+            if not game_name:
+                return
+            game_password = getpass('Game password: ')
+            if game_password:
+                game_password = utils.get_password_sha256(game_password)
+        except EOFError:
+            print('Game creation cancelled.\n')
+            return
+        print('\nCreating new game, please wait...\n')
+        game_uid = self.server.new_game(self.username, game_name, game_password)
+        print(f'New game created with ID: {game_uid}\n')
+        game = Graphics(State(**self.server.get_game_data(game_uid)))
+        result = game.game()
+        print('Game terminated.\n')
+        print(result)
+    
+    def do_pvecreategame(self, initial=None):
+        'pvegamecreate - Ask the server to create a new PvE game.\n'
         if not self.user_uid:
             print('No user is logged in currently.\n')
             return
