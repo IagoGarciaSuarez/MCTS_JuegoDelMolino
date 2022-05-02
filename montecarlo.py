@@ -10,7 +10,9 @@ def monte_carlo(state: State):
     node = Node(None, state)
     while time.time() < max_time:
         selected_node = seleccionar(node) # Select son from node
-        print(f'Selected node with ucb {selected_node.ucb}')
+        for n in selected_node.sons:
+            print("Hijo con ucb: ", n.ucb)
+        print(f'Selected node with ucb {selected_node.ucb}. Es terminal {selected_node.is_terminal} Esta expandido {selected_node.fully_expanded}')
         expanded_node = expandir(selected_node) # Expansion
         sim_node = expanded_node.deepcopy()
         value = simular(sim_node) # Simulation
@@ -37,14 +39,14 @@ def expandir(node: Node):
 
 def simular(node: Node):
     if time.time() > max_time:
-        p1_tiles = len(node.state.p1_positions) + node.state.p1_n_tiles
-        p2_tiles = len(node.state.p2_positions) + node.state.p2_n_tiles
-        if p1_tiles > p2_tiles:
-            return 0
-        elif p1_tiles < p2_tiles:
-            return 1
-        else:
-            return 2
+        # p1_tiles = len(node.state.p1_positions) + node.state.p1_n_tiles
+        # p2_tiles = len(node.state.p2_positions) + node.state.p2_n_tiles
+        # if p1_tiles > p2_tiles:
+        #     return 0
+        # elif p1_tiles < p2_tiles:
+        #     return 1
+        # else:
+        return 2
     if node.is_terminal:
         return node.state.game_state
     rand_mov = random.choice(node.possible_movements)
@@ -52,7 +54,7 @@ def simular(node: Node):
     new_node = node.make_movement(rand_mov)
     # print(f"Montecarlo en nodo con visitas: {new_node.visits}")
     # print(new_node.state)
-    simular(new_node)
+    return simular(new_node)
     
     # if node.is_terminal:
     #     return node.state.game_state
