@@ -10,3 +10,7 @@ class Movement(BaseModel):
     initial_pos: Optional[list] = None
     final_pos: list
     kill_tile: Optional[list] = None
+
+class Credentials(BaseModel):
+    username: str
+    password: str

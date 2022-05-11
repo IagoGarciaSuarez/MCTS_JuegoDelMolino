@@ -44,3 +44,4 @@ BOARD_POSITIONS = {
     "[6, 6]": [[6, 3], [3, 6]]
 }
 MAX_FICHAS = 9
+SERVER = '127.0.0.1:8000'

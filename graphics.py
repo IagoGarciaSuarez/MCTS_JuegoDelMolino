@@ -1,16 +1,37 @@
 from typing import List
-from utils import parse_coords, scale_img, unparse_coords, is_line
+from http_manager import HttpManager
+from utils import parse_coords, scale_img, unparse_coords
 from state import State
 from movement import Movement
+from monoloco import mono_loco
+from montecarlo import monte_carlo
 import const
 import pygame
 from pygame.locals import *
+import threading
 
 class Graphics:
 
-    def __init__(self, state: State = State('test')):
+    def __init__(self, mode, state: State = State(), player = 0, http_mgr=HttpManager()): # 0 -> PvP Local | 1 -> PvP Online | 2 -> PvMC | 3 -> MCvML | 4 -> MCvMC
         self.state = state
+        self.mode = mode
+        self.player = player
+        self.playing = False
+        self.sim = [0, 0]
+        self.http_mgr = http_mgr
+        self.result = None
+    
+    def wait_update(self):
+        movement = monte_carlo(self.state)
+        self.state.make_movement(movement)
+        self.playing = False
 
+    def wait_movement(self):
+        self.state = State()
+        self.state.load_state(self.http_mgr.wait_movement())
+        self.playing = False
+        print(self.state)
+    
     def game(self):
         #INICIO
         pygame.init()
@@ -38,410 +59,20 @@ class Graphics:
         p1_img  = scale_img(const.P1_TILE_IMG, (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
         p2_img = scale_img(const.P2_TILE_IMG, (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
         available_pos_img = pygame.image.load(const.AVAILABLE_POSITION)
-        selected_pos_green_img = scale_img(const.SELECTED_POSITION_GREEN, (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
-        red_pos_img = scale_img(const.SELECTED_POSITION_RED, (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
-
-        #VARIABLES
+        gs_pos_img = scale_img(const.SELECTED_POSITION_GREEN, (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
+        rs_pos_img = scale_img(const.SELECTED_POSITION_RED, (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
         
-
-        selected_tile_p1 = []
-        selected_tile_p2 = []
-        tablas = []
+        #VARIABLES
+        selected_tile = None
         line = False #SI ES TRUE HAY UN 3 EN RAYA
-
         map_tiles = [] 
-        green_positions = []
-        red_positions = []
         available_positions = []
-        selectable_positions = []
-
+        positions_rect = []
         final_pos = None
 
         running = True
         while running:
-            p1_tiles:List = self.state.p1_positions
-            p2_tiles:List = self.state.p2_positions
-            #TABLERO
-            window.blit(tablero_img, (0,0))
-            #FICHAS Y POSICIONES DISPONIBLES/NO DISPONIBLES
-            window.blits(map_tiles)
-            window.blits(green_positions)
-            window.blits(red_positions)
-            #MARCADORES
-            scoreboard_p1_tiles = font.render(str(self.state.p1_n_tiles), 1, (255, 255, 255))
-            window.blit(scoreboard_p1_tiles, (45,225))  
-            scoreboard_p2_tiles = font.render(str(self.state.p2_n_tiles), 1, (255, 255, 255))          
-            window.blit(scoreboard_p2_tiles, (const.WIDTH-65,225))
-            # scoreboard_p1_dead_tiles = font.render(str(const.MAX_FICHAS - (self.state.p1_n_tiles + len(p1_tiles))), 1, (255, 255, 255))
-            # window.blit(scoreboard_p1_dead_tiles, (45,415))
-            # scoreboard_p2_dead_tiles = font.render(str(const.MAX_FICHAS - (self.state.p2_n_tiles + len(p2_tiles))), 1, (255, 255, 255))
-            # window.blit(scoreboard_p2_dead_tiles, (const.WIDTH-65,415)) 
-            #TURNO
-
-            if(self.state.turn % 2 == 0):
-                window.blit(p1_img_scoreboard, (472,552))
-                if self.state.p1_n_tiles > 0: # SI TURNO P1 Y QUEDAN FICHAS POR PONER
-                    available_positions = [eval(pos) for pos in const.BOARD_POSITIONS if eval(pos) not in (p1_tiles + p2_tiles)]         
-            else: 
-                window.blit(p2_img_scoreboard, (472,552))
-                if self.state.p2_n_tiles > 0: # SI TURNO P1 Y QUEDAN FICHAS POR PONER
-                    available_positions = [eval(pos) for pos in const.BOARD_POSITIONS if eval(pos) not in (p1_tiles + p2_tiles)]
-                            
-            for event in pygame.event.get():
-                if event.type == pygame.MOUSEBUTTONUP:
-                    pos = pygame.mouse.get_pos()
-                    if not (pos[0] < 111 or pos[1] < 61 or pos[0] > const.HEIGHT - 15 or pos[1] > const.WIDTH - 164): # DENTRO DEL TABLERO
-                        pcoords = parse_coords(pos)
-                        # PLAYER 1
-                        if self.state.turn % 2 == 0:
-                            if self.state.p1_n_tiles > 0: # SI TURNO P1 Y QUEDAN FICHAS POR PONER
-                                available_positions = [eval(pos) for pos in const.BOARD_POSITIONS if eval(pos) not in (p1_tiles + p2_tiles)]
-                                if line:                            
-                                    if pcoords in self.state.p2_positions:
-                                        movement = Movement(selected_tile_p1, final_pos, pcoords)
-                                        self.state.make_movement(movement)
-                                        line = False
-                                        selectable_positions.clear()
-                                        red_positions.clear()
-                                else:
-                                    if pcoords in available_positions:  
-                                        movement = Movement(selected_tile_p1, pcoords)
-                                        player_positions = [pos for pos in self.state.p1_positions]
-                                        is_line = self.state.is_line(movement, player_positions)
-                                        player_positions.clear()
-                                        if is_line[0]:
-                                            final_pos = pcoords
-                                            line = True
-                                            selectable_positions += self.state.p2_positions
-                                            available_positions.clear()
-                                            red_positions.clear()
-                                        else:
-                                            self.state.make_movement(movement)
-                                            available_positions.clear()
-                                            red_positions.clear()
-                                            selectable_positions.clear()
-                                            green_positions.clear()
-                                            selected_tile_p1 = []
-                                            selected_tile_p2 = []
-                            else: # SI TURNO P1 Y NO QUEDAN FICHAS POR PONER
-                                if line:                            
-                                    if pcoords in self.state.p2_positions:
-                                        movement = Movement(selected_tile_p1, final_pos, pcoords)
-                                        self.state.make_movement(movement)
-                                        line = False
-                                        selected_tile_p1 = []
-                                        selected_tile_p2 = []
-                                        selectable_positions.clear()
-                                        red_positions.clear()
-                                else:
-                                    if not selected_tile_p1 and pcoords in self.state.p1_positions:
-                                        selected_tile_p1 = pcoords
-                                        available_positions = [pos for pos in const.BOARD_POSITIONS[str(selected_tile_p1)] if pos not in (p1_tiles + p2_tiles)]
-                                        if len(self.state.p1_positions) == 3:
-                                            available_positions = [eval(pos) for pos in const.BOARD_POSITIONS if eval(pos) not in (p1_tiles + p2_tiles)]
-                                        print(available_positions)
-                                    elif selected_tile_p1 and pcoords in available_positions:
-                                        movement = Movement(selected_tile_p1, pcoords)
-                                        is_line = self.state.is_line(movement, [p_pos for p_pos in self.state.p1_positions if p_pos != pcoords and p_pos != movement.initial_pos])
-                                        if is_line[0]:
-                                            final_pos = pcoords
-                                            line = True
-                                            selectable_positions += self.state.p2_positions
-                                            available_positions.clear()
-                                            red_positions.clear()
-                                        else:
-                                            self.state.make_movement(movement)
-                                            available_positions.clear()
-                                            red_positions.clear()
-                                            selectable_positions.clear()
-                                            green_positions.clear()
-                                            selected_tile_p1 = []
-                                            selected_tile_p2 = []  
-                                    elif selected_tile_p1 and pcoords not in available_positions:
-                                        available_positions.clear()
-                                        red_positions.clear()
-                                        selectable_positions.clear()
-                                        green_positions.clear()
-                                        selected_tile_p1 = []
-                                        selected_tile_p2 = [] 
-                        # PLAYER 2
-                        else:
-                            if self.state.p2_n_tiles > 0: # SI TURNO P2 Y QUEDAN FICHAS POR PONER
-                                available_positions = [eval(pos) for pos in const.BOARD_POSITIONS if eval(pos) not in (p1_tiles + p2_tiles)]
-                                if line:                            
-                                    if pcoords in self.state.p1_positions:
-                                        movement = Movement(selected_tile_p2, final_pos, pcoords)
-                                        self.state.make_movement(movement)
-                                        line = False
-                                        selectable_positions.clear()
-                                        red_positions.clear()
-                                else:
-                                    if pcoords in available_positions:  
-                                        movement = Movement(selected_tile_p2, pcoords)
-                                        player_positions = [pos for pos in self.state.p2_positions]
-                                        is_line = self.state.is_line(movement, player_positions)
-                                        player_positions.clear()
-                                        if is_line[0]:
-                                            final_pos = pcoords
-                                            line = True
-                                            selectable_positions += self.state.p1_positions
-                                            available_positions.clear()
-                                            red_positions.clear()
-                                        else:
-                                            self.state.make_movement(movement)
-                                            available_positions.clear()
-                                            red_positions.clear()
-                                            selectable_positions.clear()
-                                            green_positions.clear()
-                                            selected_tile_p1 = []
-                                            selected_tile_p2 = []
-                            else: # SI TURNO P2 Y NO QUEDAN FICHAS POR PONER
-                                if line:                            
-                                    if pcoords in self.state.p1_positions:
-                                        movement = Movement(selected_tile_p2, final_pos, pcoords)
-                                        self.state.make_movement(movement)
-                                        line = False
-                                        selected_tile_p1 = []
-                                        selected_tile_p2 = []
-                                        selectable_positions.clear()
-                                        red_positions.clear()
-                                else:
-                                    if not selected_tile_p2 and pcoords in self.state.p2_positions:
-                                        selected_tile_p2 = pcoords
-                                        available_positions = [pos for pos in const.BOARD_POSITIONS[str(selected_tile_p2)] if pos not in (p1_tiles + p2_tiles)]
-                                        if len(self.state.p2_positions) == 3:
-                                            available_positions = [eval(pos) for pos in const.BOARD_POSITIONS if eval(pos) not in (p1_tiles + p2_tiles)]
-                                        print(available_positions)
-                                    elif selected_tile_p2 and pcoords in available_positions:
-                                        movement = Movement(selected_tile_p2, pcoords)
-                                        is_line = self.state.is_line(movement, [p_pos for p_pos in self.state.p2_positions if p_pos != selected_tile_p2])
-                                        if is_line[0]:
-                                            final_pos = pcoords
-                                            line = True
-                                            selectable_positions += self.state.p1_positions
-                                            available_positions.clear()
-                                            red_positions.clear()
-                                        else:
-                                            self.state.make_movement(movement)
-                                            available_positions.clear()
-                                            red_positions.clear()
-                                            selectable_positions.clear()
-                                            green_positions.clear()
-                                            selected_tile_p1 = []
-                                            selected_tile_p2 = []
-                                    elif selected_tile_p2 and pcoords not in available_positions:
-                                        available_positions.clear()
-                                        red_positions.clear()
-                                        selectable_positions.clear()
-                                        green_positions.clear()
-                                        selected_tile_p1 = []
-                                        selected_tile_p2 = []
-                                            
-                                   
-
-                    #     if(line == False):
-                    #         if (self.state.p1_n_tiles != 0) or (self.state.p2_n_tiles != 0):
-                    #             if(parse_coords(pos) in available_positions):
-                    #                 pcords = parse_coords(pos)
-                    #                 #P1
-                    #                 if self.state.turn % 2 == 0:
-                    #                     p1_tiles.append(pcords)
-                    #                     available_positions.remove(pcords)
-                    #                     self.state.p1_n_tiles -= 1
-                    #                     line_p1, lines = is_line(p1_tiles)
-                    #                 #P2
-                    #                 if self.state.turn % 2 != 0:
-                    #                     p2_tiles.append(pcords)
-                    #                     available_positions.remove(pcords)
-                    #                     self.state.p2_n_tiles -= 1
-                    #                     line_p2, lines = is_line(p2_tiles)
-                    #                 self.state.turn  += 1
-                    #         else:                            
-                    #             #P1
-                    #             if(parse_coords(pos) in p1_tiles and self.state.turn % 2 == 0): 
-                    #                 positions_to_move = []
-                    #                 pcords = parse_coords(pos)
-                    #                 coord = unparse_coords(pcords) 
-                    #                 selected_tile_p1 = True
-                    #                 to_delate_position = pcords                                                     
-                    #                 for i in const.BOARD_POSITIONS['['+str(pcords[0])+', '+str(pcords[1])+']']:
-                    #                     if i in available_positions:                            
-                    #                         positions_to_move.append(i)
-                    #                         selected_tile_p11 = True
-                    #             if (parse_coords(pos) in positions_to_move and self.state.turn % 2 == 0 and selected_tile_p11):
-                    #                 pcords2 = parse_coords(pos) 
-                    #                 p1_tiles.append(pcords2)
-                    #                 p1_tiles.remove(to_delate_position)
-                    #                 available_positions.append(to_delate_position)
-                    #                 available_positions.remove(pcords2)
-                    #                 map_tiles.clear()
-                    #                 rect_append = p1_img.get_rect(center = unparse_coords(pcords2))
-                    #                 map_tiles.append((p1_img, rect_append))                                                          
-                    #                 #ACTUALIZACION ESTADOS
-                    #                 for i in lines_in_table_p1[:]:
-                    #                     for j in i:
-                    #                         if j == to_delate_position:
-                    #                             lines_in_table_p1.remove(i) 
-                    #                 selected_tile_p1 = False
-                    #                 selected_tile_p11 = False                                    
-                    #                 line_p1, lines = is_line(p1_tiles)
-                    #                 self.state.turn  += 1
-                    #             #P2
-                    #             if (parse_coords(pos) in p2_tiles and self.state.turn % 2 != 0):
-                    #                 positions_to_move = []
-                    #                 pcords = parse_coords(pos)
-                    #                 coord = unparse_coords(pcords) 
-                    #                 selected_tile_p2 = True
-                    #                 to_delate_position = pcords                                                      
-                    #                 for i in const.BOARD_POSITIONS['['+str(pcords[0])+', '+str(pcords[1])+']']:
-                    #                     if i in available_positions:                            
-                    #                         positions_to_move.append(i)
-                    #                         selected_tile_p22 = True
-                    #             if (parse_coords(pos) in positions_to_move and self.state.turn % 2 != 0 and selected_tile_p22):
-                    #                 pcords2 = parse_coords(pos) 
-                    #                 p2_tiles.append(pcords2)
-                    #                 p2_tiles.remove(to_delate_position)
-                    #                 available_positions.append(to_delate_position)
-                    #                 available_positions.remove(pcords2)
-                    #                 map_tiles.clear()
-                    #                 rect_append = p2_img.get_rect(center = unparse_coords(pcords2))
-                    #                 map_tiles.append((p2_img, rect_append))
-                    #                 #ACTUALIZACION ESTADOS
-                    #                 for i in lines_in_table_p2[:]:
-                    #                     for j in i:
-                    #                         if j == to_delate_position:
-                    #                             lines_in_table_p2.remove(i)                                
-                    #                 selected_tile_p2 = False
-                    #                 selected_tile_p22 = False
-                    #                 line_p2, lines = is_line(p2_tiles)
-                    #                 self.state.turn  += 1                                    
-                    #     else:
-                    #         if(line_p1):
-                    #             if(parse_coords(pos) in p2_tiles_to_eliminate):
-                    #                 pcords = parse_coords(pos)
-                    #                 p2_tiles.remove(pcords)
-                    #                 available_positions.append(pcords)
-                    #                 map_tiles.clear()
-                    #                 #ACTUALIZAR ESTADOS
-                    #                 for i in lines_in_table_p2[:]:
-                    #                     for j in i:
-                    #                         if j == pcords:
-                    #                             lines_in_table_p2.remove(i)
-                    #                 lines_in_table_p1.append(lines)
-                    #                 line_p1 = False
-                    #                 line = False
-                    #         if(line_p2):
-                    #             if(parse_coords(pos) in p1_tiles_to_eliminate):
-                    #                 pcords = parse_coords(pos)
-                    #                 p1_tiles.remove(pcords)
-                    #                 available_positions.append(pcords)
-                    #                 map_tiles.clear()
-                    #                 #ACTUALIZAR ESTADOS
-                    #                 for i in lines_in_table_p1[:]:
-                    #                     for j in i:
-                    #                         if j == pcords:
-                    #                             lines_in_table_p1.remove(i)
-                    #                 lines_in_table_p2.append(lines)
-                    #                 line_p2 = False
-                    #                 line = False
-                    # #TABLAS
-                    # if (pos[0] > const.WIDTH-65 and pos[0] < const.WIDTH and pos[1] > 0 and pos[1] < 65):
-                    #     tablas.append(self.state.turn)                                            
-                #KEYBOARD
-                elif event.type == KEYDOWN:
-                    if event.key == K_ESCAPE:
-                        running = False
-                    elif event.key == K_s:
-                        saved_state = State(p1_tiles, p2_tiles, self.state.p1_n_tiles, self.state.p2_n_tiles, self.state.turn , self.state.game_state)
-                        saved_state.save_state()
-                        print("State saved")
-                    elif event.key == K_r:
-                        tablero_img = pygame.image.load(const.BOARD)
-                        tablero_img = pygame.transform.scale(tablero_img,(const.WIDTH, const.HEIGHT))
-                        map_tiles.clear()
-                        p1_tiles.clear()
-                        p2_tiles.clear()
-                        p1_tiles, p2_tiles, self.state.turn  = saved_state.load_state()
-                        print("State loaded")
-                elif event.type == QUIT:
-                    running = False
-                    print("Bye!")    
-
-            #CIRCULOS VERDES EN ACCIONES DISPONIBLES
-            if not line:
-                green_positions.clear()
-                if self.state.turn % 2 == 0:
-                    if self.state.p1_n_tiles != 0 or selected_tile_p1:
-                        for av_pos in available_positions:
-                            rect = available_pos_img.get_rect(center = unparse_coords(av_pos))
-                            green_positions.append((available_pos_img, rect))
-                    elif not selected_tile_p1:
-                        for p1_pos in self.state.p1_positions:
-                            rect = selected_pos_green_img.get_rect(center = unparse_coords(p1_pos))
-                            green_positions.append((selected_pos_green_img, rect))                    
-                    elif len(self.state.p1_positions) > 3:
-                        for p1_pos in [
-                            pos for pos in const.BOARD_POSITIONS[str(selected_tile_p1)] if pos not in \
-                                (self.state.p1_positions + self.state.p2_positions)]:
-                            rect = available_pos_img.get_rect(center = unparse_coords(av_pos))
-                            green_positions.append((available_pos_img, rect))
-                else:
-                    if self.state.p2_n_tiles != 0 or selected_tile_p2:
-                        for av_pos in available_positions:
-                            rect = available_pos_img.get_rect(center = unparse_coords(av_pos))
-                            green_positions.append((available_pos_img, rect))
-                    elif not selected_tile_p2:
-                        for p2_pos in self.state.p2_positions:
-                            rect = selected_pos_green_img.get_rect(center = unparse_coords(p2_pos))
-                            green_positions.append((selected_pos_green_img, rect))                    
-                    elif len(self.state.p2_positions) > 3:
-                        for p2_pos in [
-                            pos for pos in const.BOARD_POSITIONS[str(selected_tile_p2)] if pos not in \
-                                (self.state.p1_positions + self.state.p2_positions)]:
-                            rect = available_pos_img.get_rect(center = unparse_coords(av_pos))
-                            green_positions.append((available_pos_img, rect))
-
-            else:
-                for red_pos in selectable_positions:
-                    rect = red_pos_img.get_rect(center = unparse_coords(red_pos))
-                    red_positions.append((red_pos_img, rect))
-
-            # #HACER LINEA                        
-            # if(line_p1):
-            #     if lines in lines_in_table_p1:
-            #         line_p1 = False
-            #     else:
-            #         line = True
-            #         window.blit(p1_img_scoreboard, (472,552))
-            #         p2_tiles_to_eliminate = p2_tiles[:]
-            #         for i in lines_in_table_p2[:]:
-            #             for j in i:
-            #                 if j in p2_tiles:
-            #                     p2_tiles_to_eliminate.remove(j)
-            #         for i in lines:
-            #             ncord = selected_pos_green.get_rect(center = unparse_coords(i))
-            #             window.blit(selected_pos_green, ncord)
-            #         for j in p2_tiles_to_eliminate:
-            #             ncord = selected_pos_green.get_rect(center = unparse_coords(j))
-            #             window.blit(selected_pos_red, ncord)                    
-            # if(line_p2):
-            #     if lines in lines_in_table_p2:
-            #         line_p2 = False
-            #     else:
-            #         line = True
-            #         window.blit(p2_img_scoreboard, (472,552))
-            #         p1_tiles_to_eliminate = p1_tiles[:]
-            #         for i in lines_in_table_p1[:]:
-            #             for j in i:
-            #                 if j in p1_tiles:
-            #                     p1_tiles_to_eliminate.remove(j)
-            #         for i in lines:
-            #             ncord = selected_pos_green.get_rect(center = unparse_coords(i))
-            #             window.blit(selected_pos_green, ncord) 
-            #         for j in p1_tiles_to_eliminate:
-            #             ncord = selected_pos_green.get_rect(center = unparse_coords(j))
-            #             window.blit(selected_pos_red, ncord)                            
-                   
+            turn = self.state.turn % 2
             #COLOCACIÓN DE FICHAS P1 Y P2
             map_tiles.clear()
             for p1_tile in self.state.p1_positions:
@@ -451,26 +82,141 @@ class Graphics:
             for p2_tile in self.state.p2_positions:
                 rect = p2_img.get_rect(center = unparse_coords(p2_tile))
                 map_tiles.append((p2_img, rect))
+            #TABLERO
+            window.blit(tablero_img, (0,0))
+            #FICHAS Y POSICIONES DISPONIBLES/NO DISPONIBLES
+            window.blits(map_tiles)
+            if (self.player == 1 and self.mode in [1, 2] and turn == 1) or (self.player == 1 and self.mode in [1, 3] and turn == 1) or self.mode == 0:
+                window.blits(positions_rect)
+            #MARCADORES
+            scoreboard_p1_tiles = font.render(str(self.state.p1_n_tiles), 1, (255, 255, 255))
+            window.blit(scoreboard_p1_tiles, (45,225))  
+            scoreboard_p2_tiles = font.render(str(self.state.p2_n_tiles), 1, (255, 255, 255))          
+            window.blit(scoreboard_p2_tiles, (const.WIDTH-65,225))
+            scoreboard_p1_dead_tiles = font.render(str(const.MAX_FICHAS - (self.state.p1_n_tiles + len(self.state.p1_positions))), 1, (255, 255, 255))
+            window.blit(scoreboard_p1_dead_tiles, (45,415))
+            scoreboard_p2_dead_tiles = font.render(str(const.MAX_FICHAS - (self.state.p2_n_tiles + len(self.state.p2_positions))), 1, (255, 255, 255))
+            window.blit(scoreboard_p2_dead_tiles, (const.WIDTH-65,415)) 
+            if turn:
+                window.blit(p2_img_scoreboard, (472,552))
+            else:
+                window.blit(p1_img_scoreboard, (472,552))
 
-            #PANTALLAS        
-            if(len(tablas)==2):
-                if(tablas[0]==tablas[1]):
-                    window.blit(tablas_img, (0,0))
-                else:
-                    tablasP1 = False
-                    tablasP2 = False
-                    tablas.clear()
-            self.state.endgame()
-            if (self.state.game_state == "P1 WINS"):
+            #PANTALLAS  
+            if self.state.tie == [True, True]:
+                window.blit(tablas_img, (0,0))
+            if self.state.game_state == 0:
                 window.blit(p1_wins_img, (0,0))
                 map_tiles.clear()
-            if (self.state.game_state == "P2 WINS"):
+            if self.state.game_state == 1:
                 window.blit(p2_wins_img, (0,0))
                 map_tiles.clear()
             pygame.display.update()
+            if turn == 0:
+                my_pos_tiles = self.state.p1_positions
+                my_n_tiles = self.state.p1_n_tiles
+                my_total_tiles = len(self.state.p1_positions) + self.state.p1_n_tiles
+                op_pos_tiles = self.state.p2_positions
+            else:
+                my_pos_tiles = self.state.p2_positions
+                my_n_tiles = self.state.p2_n_tiles
+                my_total_tiles = len(self.state.p2_positions) + self.state.p2_n_tiles
+                op_pos_tiles = self.state.p1_positions
+            # SI QUEDAN FICHAS POR PONER O QUEDAN 3 FICHAS POS DISPONIBLES = TODAS LAS NO OCUPADAS, SI NO, SOLO LAS LIBRES ADYACENTES
+            if my_n_tiles > 0 or my_total_tiles == 3:
+                available_positions = [eval(pos) for pos in const.BOARD_POSITIONS if eval(pos) not in (self.state.p1_positions + self.state.p2_positions)]
+            if selected_tile and my_total_tiles > 3:
+                available_positions = [pos for pos in const.BOARD_POSITIONS[str(selected_tile)] if pos not in (self.state.p1_positions + self.state.p2_positions)]
+            pos_img = available_pos_img            
+            if my_n_tiles == 0 and not selected_tile:
+                available_positions = my_pos_tiles
+                pos_img = gs_pos_img
+            if line:
+                available_positions = op_pos_tiles
+                pos_img = rs_pos_img
+            positions_rect.clear()
+            for av_pos in available_positions:
+                rect = pos_img.get_rect(center = unparse_coords(av_pos))
+                positions_rect.append((pos_img, rect)) 
+
+            # Montecarlo
+            turn = self.state.turn % 2
+            if ((self.player == 1 and self.mode == 2 and turn == 0) or (self.player == 0 and self.mode == 3 and turn == 0) or self.mode == 4) and \
+                self.state.game_state == 3 and not self.playing:
+                    mc_turn = threading.Thread(target=self.wait_update)
+                    self.playing = True
+                    mc_turn.start()
+            # Monoloco
+            if turn == 1 and self.mode == 3 and self.state.game_state == 3 and not self.playing:
+                ml_turn = mono_loco(self.state)
+                self.state.make_movement(ml_turn)
+            if self.mode == 3 and self.state.game_state in [0, 1, 2]:
+                self.sim[self.state.game_state] += 1
+                self.state = State()
+                if sum(self.sim) > 10:
+                    running = False
+                    self.result = self.sim
+            # Online PvP
+            if self.mode == 1 and not turn == self.player:
+                if not self.playing:
+                    wait_th = threading.Thread(target=self.wait_movement())
+                    self.playing = True
+                    wait_th.start()
+
+            for event in pygame.event.get():
+                # KEYBOARD
+                if event.type == KEYDOWN:
+                    if event.key == K_ESCAPE:
+                        running = False
+                        self.result = self.state.game_state
+                elif event.type == QUIT:
+                    running = False
+                    self.result = self.state.game_state
+                    print("Bye!")    
+                if self.state.game_state in [0, 1, 2]:
+                    break
+                if (self.player == 1 and self.mode == 2 and turn == 0) or self.mode in [3, 4]:
+                    break
+                elif event.type == pygame.MOUSEBUTTONUP:
+                    if not self.player == turn and not self.mode == 0:
+                        print('No es tu turno')
+                        break
+                    pos = pygame.mouse.get_pos()
+                    if pos[0] > const.WIDTH-65 and pos[0] < const.WIDTH and pos[1] > 0 and pos[1] < 65:  
+                        if self.mode == 1:
+                            self.state = State()
+                            self.state.load_state(self.http_mgr.make_movement(Movement(None, None, None)))
+                        else:
+                            self.state.make_movement(Movement(None, None, None))
+                    if not (pos[0] < 111 or pos[1] < 61 or pos[0] > const.HEIGHT - 15 or pos[1] > const.WIDTH - 164): # DENTRO DEL TABLERO
+                        pcoords = parse_coords(pos)
+                        # Si se ha hecho linea, es necesario seleccionar una ficha del oponente
+                        if pcoords in available_positions:
+                            if line:                       
+                                movement = Movement(selected_tile, final_pos, pcoords)
+                                if self.mode == 1:
+                                    self.state = State()
+                                    self.state.load_state(self.http_mgr.make_movement(movement))
+                                else:
+                                    self.state.make_movement(movement)
+                                selected_tile = None
+                                line = False
+                            else:
+                                if not selected_tile and my_n_tiles == 0:
+                                    selected_tile = pcoords
+                                else:
+                                    movement = Movement(selected_tile, pcoords)
+                                    line = self.state.is_line(movement, my_pos_tiles)
+                                    if line:
+                                        final_pos = pcoords
+                                    else:
+                                        if self.mode == 1:
+                                            self.state = State()
+                                            self.state.load_state(self.http_mgr.make_movement(movement))
+                                        else:
+                                            self.state.make_movement(movement)
+                                        selected_tile = None
+                        else:
+                            selected_tile = None
         pygame.quit()
-
-graphics = Graphics()
-graphics.game()
-
-
+        return self.result

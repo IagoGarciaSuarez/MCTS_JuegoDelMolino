@@ -4,10 +4,10 @@ __pycache__/
 pruebas.py
 
 # Persistence
-data/*
+data/
 
 # venv
-dea/
+mcts/
 
 # logs
 logs/
