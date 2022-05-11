@@ -15,11 +15,13 @@ class State:
         self.p2_n_tiles = const.MAX_FICHAS
         self.turn = 0
         self.game_state = 3 # 0 -> P1 Wins | 1 -> P2 Wins | 2 -> Tie | 3 -> Playing
+        self.tie = [False, False]
 
     def __eq__(self, state):
         if (isinstance(state, State)):
             return self.p1_positions == state.p1_positions and self.p2_positions == state.p2_positions and \
-                self.p1_n_tiles == state.p1_n_tiles and self.p2_n_tiles == state.p2_n_tiles and self.turn == state.turn and self.game_state == state.game_state
+                self.p1_n_tiles == state.p1_n_tiles and self.p2_n_tiles == state.p2_n_tiles and \
+                    self.turn == state.turn and self.game_state == state.game_state and self.tie == state.tie
         return False
     
     def __dict__(self):
@@ -30,20 +32,10 @@ class State:
             "p1_n_tiles": self.p1_n_tiles,
             "p2_n_tiles": self.p2_n_tiles,
             "turn": self.turn,
-            "game_state": self.game_state
+            "game_state": self.game_state,
+            "tie": [0, 0]
         }
-        return state_data
-    
-    # def __repr__(self) -> str:
-    #     state_data = {
-    #         "state_id": self.__state_id,
-    #         "p1_positions": self.p1_positions,
-    #         "p2_positions": self.p2_positions,
-    #         "p1_n_tiles": self.p1_n_tiles,
-    #         "p2_n_tiles": self.p2_n_tiles,
-    #         "turn": self.turn
-    #     }
-    #     return state_data
+        return json.loads(json.dumps(state_data))
     
     def __str__(self) -> str:
         return json.dumps(self.__dict__())
@@ -54,7 +46,9 @@ class State:
 
     def deepcopy(self):
         new_state = State()
-        new_state.load_state(self.__dict__())
+        cur_state = json.loads(json.dumps(self.__dict__()))
+        new_state.load_state(cur_state)
+        return new_state
 
     def save_state(self):
         '''Guardado del último estado en un archivo JSON.'''
@@ -73,6 +67,7 @@ class State:
         self.p2_n_tiles = state_data["p2_n_tiles"]
         self.turn = state_data["turn"]
         self.game_state = state_data["game_state"]
+        self.tie = copy.deepcopy(state_data["tie"])
 
         #logs.info("Última partida guardada cargada correctamente.")
 
@@ -85,6 +80,8 @@ class State:
 
     def validate_movement(self, movement: Movement):
         turn = self.turn % 2
+        if not movement.initial_pos and not movement.final_pos and not movement.kill_tile:
+            return True
         if turn == 0:
             my_pos_tiles = self.p1_positions
             my_n_tiles = len(self.p1_positions) + self.p1_n_tiles
@@ -96,6 +93,9 @@ class State:
                 return False
         else:
             tile = self.get_tile_data(movement.initial_pos)
+            if not tile.player == turn:
+                print("Not the turn")
+                return False
             if not tile or not tile.alive:
                 print("No tile")
                 return False
@@ -133,6 +133,14 @@ class State:
         if not self.validate_movement(movement):
             return self.__dict__()
         turn = self.turn % 2
+        if not movement.initial_pos and not movement.final_pos and not movement.kill_tile:
+            self.tie[turn] = True
+            if self.tie == [True, True]:
+                self.update_game_state(True)
+                return self.__dict__()
+            self.turn += 1
+            return self.__dict__()
+        self.tie = [False, False]
         if turn == 0:
             my_pos_tiles = self.p1_positions
             op_pos_tiles = self.p2_positions
@@ -151,10 +159,12 @@ class State:
             op_pos_tiles.remove(movement.kill_tile)
         self.turn += 1
         self.update_game_state() # Actualiza el estado de la partida
-        # implement http with movement to server
         return self.__dict__()
     
-    def update_game_state(self):
+    def update_game_state(self, tie=False):
+        if tie:
+            self.game_state = 2
+            return
         if (len(self.p1_positions) + self.p1_n_tiles) < 3:
             self.game_state = 1
             return

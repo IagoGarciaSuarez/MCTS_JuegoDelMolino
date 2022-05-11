@@ -1,19 +1,37 @@
 from typing import List
+from http_manager import HttpManager
 from utils import parse_coords, scale_img, unparse_coords
 from state import State
 from movement import Movement
+from monoloco import mono_loco
 from montecarlo import monte_carlo
 import const
 import pygame
 from pygame.locals import *
+import threading
 
 class Graphics:
 
-    def __init__(self, mode, state: State = State(), player = 0): # 0 -> pvpl | 1 -> pvpo | 2 -> pvmc | 3 -> mcvp | 4 -> mcvmc
+    def __init__(self, mode, state: State = State(), player = 0, http_mgr=HttpManager()): # 0 -> PvP Local | 1 -> PvP Online | 2 -> PvMC | 3 -> MCvML | 4 -> MCvMC
         self.state = state
         self.mode = mode
         self.player = player
+        self.playing = False
+        self.sim = [0, 0]
+        self.http_mgr = http_mgr
+        self.result = None
+    
+    def wait_update(self):
+        movement = monte_carlo(self.state)
+        self.state.make_movement(movement)
+        self.playing = False
 
+    def wait_movement(self):
+        self.state = State()
+        self.state.load_state(self.http_mgr.wait_movement())
+        self.playing = False
+        print(self.state)
+    
     def game(self):
         #INICIO
         pygame.init()
@@ -43,10 +61,9 @@ class Graphics:
         available_pos_img = pygame.image.load(const.AVAILABLE_POSITION)
         gs_pos_img = scale_img(const.SELECTED_POSITION_GREEN, (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
         rs_pos_img = scale_img(const.SELECTED_POSITION_RED, (const.BLOCKSIZE - 10, const.BLOCKSIZE - 10))
-
+        
         #VARIABLES
         selected_tile = None
-        tablas = []
         line = False #SI ES TRUE HAY UN 3 EN RAYA
         map_tiles = [] 
         available_positions = []
@@ -69,7 +86,7 @@ class Graphics:
             window.blit(tablero_img, (0,0))
             #FICHAS Y POSICIONES DISPONIBLES/NO DISPONIBLES
             window.blits(map_tiles)
-            if (self.player == 0 and self.mode in [1, 2] and turn == 0) or (self.player == 1 and self.mode in [1, 3] and turn == 1) or self.mode == 0:
+            if (self.player == 1 and self.mode in [1, 2] and turn == 1) or (self.player == 1 and self.mode in [1, 3] and turn == 1) or self.mode == 0:
                 window.blits(positions_rect)
             #MARCADORES
             scoreboard_p1_tiles = font.render(str(self.state.p1_n_tiles), 1, (255, 255, 255))
@@ -80,23 +97,21 @@ class Graphics:
             window.blit(scoreboard_p1_dead_tiles, (45,415))
             scoreboard_p2_dead_tiles = font.render(str(const.MAX_FICHAS - (self.state.p2_n_tiles + len(self.state.p2_positions))), 1, (255, 255, 255))
             window.blit(scoreboard_p2_dead_tiles, (const.WIDTH-65,415)) 
-            #PANTALLAS        
-            if(len(tablas)==2):
-                if(tablas[0]==tablas[1]):
-                    window.blit(tablas_img, (0,0))
-                else:
-                    tablasP1 = False
-                    tablasP2 = False
-                    tablas.clear()
-            self.state.update_game_state()
-            if (self.state.game_state == 0):
+            if turn:
+                window.blit(p2_img_scoreboard, (472,552))
+            else:
+                window.blit(p1_img_scoreboard, (472,552))
+
+            #PANTALLAS  
+            if self.state.tie == [True, True]:
+                window.blit(tablas_img, (0,0))
+            if self.state.game_state == 0:
                 window.blit(p1_wins_img, (0,0))
                 map_tiles.clear()
-            if (self.state.game_state == 1):
+            if self.state.game_state == 1:
                 window.blit(p2_wins_img, (0,0))
                 map_tiles.clear()
             pygame.display.update()
-
             if turn == 0:
                 my_pos_tiles = self.state.p1_positions
                 my_n_tiles = self.state.p1_n_tiles
@@ -125,42 +140,65 @@ class Graphics:
                 positions_rect.append((pos_img, rect)) 
 
             # Montecarlo
-            if (self.player == 0 and self.mode == 3 and turn == 0) or (self.player == 1 and self.mode == 2 and turn == 1) or self.mode == 4: 
-                movement = monte_carlo(self.state)
-                self.state.make_movement(movement)
+            turn = self.state.turn % 2
+            if ((self.player == 1 and self.mode == 2 and turn == 0) or (self.player == 0 and self.mode == 3 and turn == 0) or self.mode == 4) and \
+                self.state.game_state == 3 and not self.playing:
+                    mc_turn = threading.Thread(target=self.wait_update)
+                    self.playing = True
+                    mc_turn.start()
+            # Monoloco
+            if turn == 1 and self.mode == 3 and self.state.game_state == 3 and not self.playing:
+                ml_turn = mono_loco(self.state)
+                self.state.make_movement(ml_turn)
+            if self.mode == 3 and self.state.game_state in [0, 1, 2]:
+                self.sim[self.state.game_state] += 1
+                self.state = State()
+                if sum(self.sim) > 10:
+                    running = False
+                    self.result = self.sim
+            # Online PvP
+            if self.mode == 1 and not turn == self.player:
+                if not self.playing:
+                    wait_th = threading.Thread(target=self.wait_movement())
+                    self.playing = True
+                    wait_th.start()
 
             for event in pygame.event.get():
                 # KEYBOARD
                 if event.type == KEYDOWN:
                     if event.key == K_ESCAPE:
                         running = False
-                    elif event.key == K_s:
-                        saved_state = State(p1_tiles, p2_tiles, self.state.p1_n_tiles, self.state.p2_n_tiles, self.state.turn , self.state.game_state)
-                        saved_state.save_state()
-                        print("State saved")
-                    elif event.key == K_r:
-                        tablero_img = pygame.image.load(const.BOARD)
-                        tablero_img = pygame.transform.scale(tablero_img,(const.WIDTH, const.HEIGHT))
-                        map_tiles.clear()
-                        p1_tiles, p2_tiles, self.state.turn  = saved_state.load_state()
-                        print("State loaded")
+                        self.result = self.state.game_state
                 elif event.type == QUIT:
                     running = False
+                    self.result = self.state.game_state
                     print("Bye!")    
-                if (self.player == 0 and self.mode == 3 and turn == 0) or (self.player == 1 and self.mode == 2 and turn == 1) or self.mode == 4:
+                if self.state.game_state in [0, 1, 2]:
+                    break
+                if (self.player == 1 and self.mode == 2 and turn == 0) or self.mode in [3, 4]:
                     break
                 elif event.type == pygame.MOUSEBUTTONUP:
                     if not self.player == turn and not self.mode == 0:
                         print('No es tu turno')
                         break
                     pos = pygame.mouse.get_pos()
+                    if pos[0] > const.WIDTH-65 and pos[0] < const.WIDTH and pos[1] > 0 and pos[1] < 65:  
+                        if self.mode == 1:
+                            self.state = State()
+                            self.state.load_state(self.http_mgr.make_movement(Movement(None, None, None)))
+                        else:
+                            self.state.make_movement(Movement(None, None, None))
                     if not (pos[0] < 111 or pos[1] < 61 or pos[0] > const.HEIGHT - 15 or pos[1] > const.WIDTH - 164): # DENTRO DEL TABLERO
                         pcoords = parse_coords(pos)
                         # Si se ha hecho linea, es necesario seleccionar una ficha del oponente
                         if pcoords in available_positions:
                             if line:                       
                                 movement = Movement(selected_tile, final_pos, pcoords)
-                                self.state.make_movement(movement)
+                                if self.mode == 1:
+                                    self.state = State()
+                                    self.state.load_state(self.http_mgr.make_movement(movement))
+                                else:
+                                    self.state.make_movement(movement)
                                 selected_tile = None
                                 line = False
                             else:
@@ -172,11 +210,13 @@ class Graphics:
                                     if line:
                                         final_pos = pcoords
                                     else:
-                                        self.state.make_movement(movement)
+                                        if self.mode == 1:
+                                            self.state = State()
+                                            self.state.load_state(self.http_mgr.make_movement(movement))
+                                        else:
+                                            self.state.make_movement(movement)
                                         selected_tile = None
                         else:
                             selected_tile = None
-            
         pygame.quit()
-graphics = Graphics(4, player=0)
-graphics.game()
+        return self.result

@@ -10,11 +10,8 @@ La práctica consistirá en la implementación de un juego que deberá ser:
 - Por turnos.
 - De tablero.
 
-## Autores
+## Autor
 - Iago García Suárez
-- Celia Díaz Fernández
-- Carlos Almodóvar Román
-- David Illescas Herrera
 
 ## Definición y Explicación del juego
 Se ha elegido el [**Juego del Molino**](https://es.wikipedia.org/wiki/Juego_del_molino) como objetivo:

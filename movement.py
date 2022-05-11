@@ -20,6 +20,9 @@ class Movement(dict):
     def __str__(self):
         return f'Movement from {self.initial_pos} to {self.final_pos} killing {self.kill_tile}'
     
+    def __repr__(self) -> str:
+        return str(self)
+    
     def deepcopy(self):
         new_movement = Movement(copy.deepcopy(self.initial_pos), copy.deepcopy(self.final_pos), copy.deepcopy(self.kill_tile))
         return new_movement

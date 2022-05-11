@@ -11,7 +11,8 @@ class ServerManager:
     def new_game(self, username, game_name, password=''):
         '''Crea una nueva partida y le asigna un servicio para gestionarla.'''
         game_uid = str(uuid.uuid4())
-        board = State(game_uid)
+        board = State()
+        board.__state_id = game_uid
         created_on = datetime.now()
         game_data = {
             game_uid: {
@@ -96,20 +97,22 @@ class ServerManager:
         return False
     
     def make_movement(self, state, movement):
-        state = State(**state)
+        n_state = State()
+        n_state.load_state(state)
+        print("HACIENDO MOVIMIENTO", movement)
         movement = Movement(**dict(movement))
-        turn = state.turn % 2
+        turn = n_state.turn % 2
         if turn == 0:
             if movement.initial_pos:
-                state.p1_positions.remove(movement.initial_pos)
-            state.p1_positions.append(movement.final_pos)
+                n_state.p1_positions.remove(movement.initial_pos)
+            n_state.p1_positions.append(movement.final_pos)
             if movement.kill_tile:
-                state.p2_positions.remove(movement.kill_tile)
+                n_state.p2_positions.remove(movement.kill_tile)
         else:
             if movement.initial_pos:
-                state.p2_positions.remove(movement.initial_pos)
-            state.p2_positions.append(movement.final_pos)
+                n_state.p2_positions.remove(movement.initial_pos)
+            n_state.p2_positions.append(movement.final_pos)
             if movement.kill_tile:
-                state.p1_positions.remove(movement.kill_tile)     
-        state.turn += 1 
-        return state.__dict__()
+                n_state.p1_positions.remove(movement.kill_tile)     
+        n_state.turn += 1 
+        return n_state.__dict__()

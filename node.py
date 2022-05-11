@@ -1,34 +1,44 @@
-import random
 import numpy
 import const
 from state import State
 from movement import Movement
 
 class Node:
-    def __init__(self, movement: Movement, state: State, parent=None): 
-        self.id = random.random()
+    def __init__(self, state: State, movement: Movement=None, parent=None): 
         self.movement = movement
         self.state = state
         self.parent = parent
-        self.wins = [0, 0] # Wins = [J1, J2]
+        self.wins = [0, 0, 0] # Wins = [J1, J2, T]
         self.visits = 0
         self.sons = []
         self.possible_movements = self.get_possible_movements()
         self.is_terminal = self.state.game_state in [0, 1, 2]
         self.fully_expanded = not self.possible_movements
-        self.ucb = float('inf')
+        self.ucb = None
     
+    def __str__(self):
+        node_info = f'Estado {self.state}\nVictorias: {self.wins[0]}\nDerrotas: {self.wins[1]}\nEmpates: {self.wins[2]}' + \
+            f'Visitas: {self.visits}\nEs Terminal: {self.is_terminal}\nTotalmente expandido: {self.fully_expanded}\n' + \
+                f'Posibles movimientos sin expandir: {self.possible_movements}\nUCB: {self.ucb}\n'
+        if self.parent:
+            node_info += f'Estado del Padre: {self.parent.state}'
+            node_info += f'\nVisitas al padre: {self.parent.visits}\nMovimiento: {self.movement}\n'
+        return node_info
+    
+    def __eq__(self, other):
+        if isinstance(other, Node):
+            return self.movement == other.movement and self.state == other.state and self.parent == other.parent and self.wins == other.wins and \
+                self.visits == other.visits and self.sons == other.sons and self.possible_movements == other.possible_movements and self.is_terminal == other.is_terminal and \
+                    self.fully_expanded == other.fully_expanded and self.ucb == other.ucb
+        return False
+
     def update_ucb(self):
         if not self.parent:
             return
-        node_turn = self.state.turn % 2
-        if node_turn:
-            node_op_turn = 0
-        else:
-            node_op_turn = 1
+        if self.visits == 0:
+            self.ucb = float('inf')
         cte = 2 * 1/numpy.sqrt(2)
-        root = numpy.sqrt((numpy.log(self.parent.visits))/self.visits)
-        self.ucb = ((self.wins[node_turn] - self.wins[node_op_turn]) / self.visits) + cte*root
+        self.ucb = ((self.wins[self.parent.state.turn%2] - self.wins[self.state.turn%2]) / self.visits) + cte * numpy.sqrt((2 * numpy.log(self.parent.visits) / self.visits))
     
     def get_possible_movements(self):
         ''' Genera una lista con todos los posibles movimientos desde el nodo '''
@@ -52,7 +62,7 @@ class Node:
                     movement = Movement(i_pos, f_pos)
                     if self.state.is_line(movement, p_pos):
                         for k_pos in op_pos: # Por cada ficha que puede eliminar
-                            movement.kill_tile = k_pos
+                            movement = Movement(i_pos, f_pos, k_pos)
                             movements.append(movement)
                     else:
                         movements.append(movement)
@@ -62,7 +72,7 @@ class Node:
                 movement = Movement(None, f_pos)
                 if self.state.is_line(movement, p_pos):
                     for k_pos in op_pos:
-                        movement.kill_tile = k_pos
+                        movement = Movement(None, f_pos, k_pos)
                         movements.append(movement)
                 else:
                     movements.append(movement)
@@ -75,23 +85,19 @@ class Node:
         self.possible_movements.remove(movement)
         if not self.possible_movements:
             self.fully_expanded = True
-        new_node = Node(movement, new_state, self)
+        new_node = Node(new_state, movement=movement, parent=self)
         self.sons.append(new_node)
         return new_node
     
     def deepcopy(self):
         new_state = State()
         new_state.load_state(self.state.__dict__())
-        new_node = Node(None, new_state)
-        if self.movement:
-            new_node.movement = self.movement.deepcopy()
-        if self.parent:
-            new_node.parent = self.parent
+        new_node = Node(new_state, movement=self.movement, parent=self.parent)
         new_node.wins = [val for val in self.wins]
         new_node.visits = self.visits
         new_node.sons = [son.deepcopy() for son in self.sons]
         new_node.is_terminal = self.is_terminal
         new_node.fully_expanded = self.fully_expanded
-        new_node.possible_movements = [p_movement.deepcopy() for p_movement in self.possible_movements]
         new_node.ucb = self.ucb
         return new_node
+

@@ -2,8 +2,6 @@ import json
 import websocket
 import requests
 import const
-import asyncio
-import threading
 
 class HttpManager:
     def __init__(self, uri=const.SERVER):
@@ -27,7 +25,6 @@ class HttpManager:
         self.ws.connect(uri)
         self.ws.send(json.dumps(req))
         response = self.ws.recv()
-        print(response)
         response = json.loads(response)
         if response["success"]:
             return response["data"]
@@ -54,8 +51,7 @@ class HttpManager:
         }
         resp = requests.post('http://' + self.uri + '/login', json=req)
         if resp.json()["success"]:
-            resp = {"token": resp.json()["token"], "user_uid": resp.json()["user_uid"]}
-            return resp
+            return resp.json()["token"]
         return
     
     def create_user(self, username, password):
@@ -65,9 +61,7 @@ class HttpManager:
         }
         req = json.loads(json.dumps(req))
         resp = requests.post('http://' + self.uri + '/newuser', json=req)
-        if resp.json()["success"]:
-            return True
-        return False
+        return resp.json()["success"]
     
     def logout(self, token):
         resp = requests.delete('http://' + const.SERVER + '/logout', headers={"Authorization": token})
@@ -82,16 +76,22 @@ class HttpManager:
         return resp.json()["success"]
 
     def make_movement(self, movement):
+        print("Raw move: ", movement)
         print("Movimiento: ", json.dumps(movement.__dict__))
         self.ws.send(json.dumps(movement.__dict__))
         resp = self.ws.recv()
         resp = json.loads(resp)
-        print(resp)
+        if resp['success']:
+            return resp['data']
+
+    def wait_movement(self):
+        resp = self.ws.recv()
+        resp = json.loads(resp)
         if resp['success']:
             return resp['data']
 
     def list_games(self):
-        resp = requests.get('http://' + const.SERVER + '/game/list')
+        resp = requests.get('http://' + const.SERVER + '/gamelist')
         if resp.json()['success']:
             return resp.json()['data']
 
